@@ -3,7 +3,7 @@
 // ==============================================================================
 
 // PLACEHOLDERS: These variables would be set after you configure the Google Sheets API
-const API_URL = 'YOUR_GOOGLE_SHEETS_API_ENDPOINT_HERE'; 
+const API_URL = 'https://script.google.com/macros/s/AKfycbzYqLnwRXdH2GcK2F-MfTxrpZVPSLyHjd8CkoPdjSUvIFuIZbCWX_0OnuDcHPRWZXxS/exec'; 
 const SPREADSHEET_ID = '1d8bG3SMD6RwJJdrXs70faPyWB6Y1w6TN1jO-oClHdyA'; // Your sheet ID
 const SHEET_NAME = 'Sheet1'; // Assuming default sheet name
 
