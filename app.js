@@ -2,11 +2,11 @@
 // 1. Configuration (MUST BE UPDATED ACCORDING TO README.MD INSTRUCTIONS)
 // ==============================================================================
 
-// PLACEHOLDERS: These variables can be provided via the local `.env` file
-// `loadEnv()` will attempt to read `/ .env` at runtime and override these defaults.
-let API_URL = 'https://script.google.com/macros/s/AKfycbzYqLnwRXdH2GcK2F-MfTxrpZVPSLyHjd8CkoPdjSUvIFuIZbCWX_0OnuDcHPRWZXxS/exec'; // default Web App URL
-let SPREADSHEET_ID = '1d8bG3SMD6RwJJdrXs70faPyWB6Y1w6TN1jO-oClHdyA'; // default sheet ID
-let SHEET_NAME = 'Sheet1'; // default sheet name
+// Configuration variables - MUST be loaded from .env file
+// These will be populated by loadEnv() function
+let API_URL = '';
+let SPREADSHEET_ID = '';
+let SHEET_NAME = '';
 
 // If running on Netlify, prefer the serverless proxy which adds CORS headers.
 if (typeof window !== 'undefined' && window.location && window.location.hostname && window.location.hostname.endsWith('netlify.app')) {
@@ -14,16 +14,21 @@ if (typeof window !== 'undefined' && window.location && window.location.hostname
 }
 
 /**
- * Try to load configuration from a `.env` file served at the web root.
- * This is a simple, optional runtime convenience for static sites.
- * If `.env` is not available (or fetch fails), defaults above are used.
+ * Load configuration from `.env` file with fallback support.
+ * Tries to load from .env file, falls back to defaults if not available.
  */
 async function loadEnv() {
     try {
         const resp = await fetch('/.env');
-        if (!resp.ok) return; // can't load .env in this environment
+        if (!resp.ok) {
+            console.warn('⚠️ .env file not found, using fallback configuration');
+            return loadFallbackConfig();
+        }
+        
         const text = await resp.text();
         const lines = text.split(/\r?\n/);
+        let loadedConfig = {};
+        
         for (const raw of lines) {
             const line = raw.trim();
             if (!line || line.startsWith('#')) continue;
@@ -31,16 +36,66 @@ async function loadEnv() {
             if (idx === -1) continue;
             const key = line.slice(0, idx).trim();
             const val = line.slice(idx + 1).trim();
-            switch (key) {
-                case 'API_URL': API_URL = val; break;
-                case 'SPREADSHEET_ID': SPREADSHEET_ID = val; break;
-                case 'SHEET_NAME': SHEET_NAME = val; break;
-                default: break;
-            }
+            loadedConfig[key] = val;
         }
-        console.log('Config loaded from /.env');
+        
+        // Set configuration values
+        API_URL = loadedConfig.API_URL || '';
+        SPREADSHEET_ID = loadedConfig.SPREADSHEET_ID || '';
+        SHEET_NAME = loadedConfig.SHEET_NAME || '';
+        
+        // Validate required configuration
+        const missing = [];
+        if (!API_URL) missing.push('API_URL');
+        if (!SPREADSHEET_ID) missing.push('SPREADSHEET_ID');
+        if (!SHEET_NAME) missing.push('SHEET_NAME');
+        
+        if (missing.length > 0) {
+            console.warn('⚠️ Missing configuration in .env file, using fallback for:', missing.join(', '));
+            loadFallbackConfig(missing);
+            return;
+        }
+        
+        console.log('✅ Configuration loaded successfully from /.env');
+        console.log('API_URL:', API_URL);
+        console.log('SPREADSHEET_ID:', SPREADSHEET_ID);
+        console.log('SHEET_NAME:', SHEET_NAME);
+        
     } catch (e) {
-        console.warn('No /.env available or failed to load. Using defaults.');
+        console.warn('⚠️ Error loading .env file, using fallback configuration:', e.message);
+        loadFallbackConfig();
+    }
+}
+
+/**
+ * Load fallback configuration for local development
+ */
+function loadFallbackConfig(missingFields = []) {
+    // Default fallback values (replace with your actual values)
+    const fallbackConfig = {
+        API_URL: 'https://script.google.com/macros/s/AKfycbzYqLnwRXdH2GcK2F-MfTxrpZVPSLyHjd8CkoPdjSUvIFuIZbCWX_0OnuDcHPRWZXxS/exec',
+        SPREADSHEET_ID: '1QrKBOIctDYxLg-XNYP3uNLmxiSaHOW0WLN3GPrB3MYLg8-9P0leaSIzY',
+        SHEET_NAME: 'Sheet1'
+    };
+    
+    // Use fallback values for missing fields
+    if (!API_URL || missingFields.includes('API_URL')) {
+        API_URL = fallbackConfig.API_URL;
+    }
+    if (!SPREADSHEET_ID || missingFields.includes('SPREADSHEET_ID')) {
+        SPREADSHEET_ID = fallbackConfig.SPREADSHEET_ID;
+    }
+    if (!SHEET_NAME || missingFields.includes('SHEET_NAME')) {
+        SHEET_NAME = fallbackConfig.SHEET_NAME;
+    }
+    
+    console.log('🔄 Using fallback configuration');
+    console.log('API_URL:', API_URL);
+    console.log('SPREADSHEET_ID:', SPREADSHEET_ID);
+    console.log('SHEET_NAME:', SHEET_NAME);
+    
+    if (missingFields.length > 0) {
+        console.warn('⚠️ Missing fields in .env file, used fallback values for:', missingFields.join(', '));
     }
 }
 
@@ -70,12 +125,22 @@ async function fetchData() {
     console.log("Attempting to fetch data from Google Sheet...");
     try {
         const response = await fetch(`${API_URL}?action=read`);
-        
+
         if (!response.ok) {
+            const text = await response.text();
+            console.error('Non-OK response from API:', response.status, text);
             throw new Error(`HTTP error! status: ${response.status}`);
         }
-        
-        const result = await response.json();
+
+        // Read raw text first so we can log HTML or errors returned by the endpoint
+        const raw = await response.text();
+        let result;
+        try {
+            result = JSON.parse(raw);
+        } catch (err) {
+            console.error('Failed to parse JSON from API. Raw response below:\n', raw);
+            throw new Error('Invalid JSON from API: ' + err.message);
+        }
         
         if (result.success && Array.isArray(result.data)) {
             inventoryData = result.data.map(item => ({

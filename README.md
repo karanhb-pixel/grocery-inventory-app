@@ -31,13 +31,24 @@ You must choose a method to securely connect the web app (frontend JavaScript) t
 2.  **Deploy as Web App:** Write a simple script (called a 'serverless backend') that acts as a secure intermediary between your `app.js` and the sheet data. You deploy this script as a 'Web App' to get a unique URL.
 3.  **Get the API Endpoint:** The deployed URL is your secure **`API_URL`**.
 
+### Step 3: Apps Script (Code) Included
+
+This repository already includes a reference `Code.gs` file that you can copy into the Google Apps Script editor. It exposes a simple JSON HTTP API and includes CORS headers and an `OPTIONS` handler to support browser fetch requests. The file is located at `Code.gs` in this repo.
+
+Make sure when you deploy the Apps Script as a Web App you create a new deployment version after any server-side edits so the latest code is used.
+
 #### Option B: Dedicated API Service (Advanced)
 
 Use a dedicated server (like Node.js, Python, or a service like Sheety/SheetDB) to host a secure API layer that handles the authentication and read/write requests to the Google Sheets API.
 
 ### Step 3: Update `app.js` Configuration
 
-Once you have secured your API endpoint (the URL from Step 2), you must open the `app.js` file and replace the placeholder variables at the top:
+Once you have secured your API endpoint (the URL from Step 2), you can configure the frontend in one of two ways:
+
+- Option 1 (recommended for Netlify): Set a Netlify environment variable named `API_URL` to your Apps Script `/exec` URL and deploy the site. The included Netlify Function `netlify/functions/sheets.js` will forward requests to Apps Script and add proper CORS headers. The function reads the target URL from the Netlify environment as `API_URL`.
+- Option 2 (simple/test): Edit `app.js` directly and update the `API_URL` constant at the top of the file. Note: direct browser calls to Apps Script can be blocked by CORS unless your Apps Script deployment returns CORS headers (the `Code.gs` provided includes these headers).
+
+If you choose to edit `app.js` directly, replace the placeholder variables at the top:
 
 ```javascript
 // ==============================================================================
