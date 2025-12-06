@@ -27,24 +27,31 @@ document.addEventListener('DOMContentLoaded', () => {
 // 3. Data Fetching and Sorting Logic
 // ==============================================================================
 
-// Simulates fetching data from the Google Sheet via your configured API endpoint
+// Fetches data from the Google Sheet via the configured API endpoint
 async function fetchData() {
     console.log("Attempting to fetch data from Google Sheet...");
     try {
-        // In a real app, this API call would require authorization tokens and parameters
-        // Example: const response = await fetch(`${API_URL}/read?id=${SPREADSHEET_ID}&sheet=${SHEET_NAME}`);
+        const response = await fetch(`${API_URL}?action=read`);
         
-        // --- START: Simulation Data ---
-        // Since API is not configured, we use simulation data based on the structure:
-        // ID, ITEM_NAME, PRICE, PURCHASE_PRICE, CATEGORY, STATUS
-        inventoryData = [
-            { id: 1, name: "Basmati Rice", price: 180.00, purchasePrice: 150.00, category: "Staple Foods", status: "Active" },
-            { id: 2, name: "Curd/Yogurt", price: 40.00, purchasePrice: 30.00, category: "Dairy & Related", status: "Active" },
-            { id: 3, name: "Turmeric Powder", price: 65.50, purchasePrice: 50.00, category: "Spices & Condiments", status: "Active" },
-            { id: 4, name: "Sunflower Oil", price: 150.00, purchasePrice: 125.00, category: "Oils & Ghee", status: "Active" }
-        ];
-        console.log("Data loaded (simulated).");
-        // --- END: Simulation Data ---
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        const result = await response.json();
+        
+        if (result.success && Array.isArray(result.data)) {
+            inventoryData = result.data.map(item => ({
+                id: item.id,
+                name: item.name,
+                price: parseFloat(item.price),
+                purchasePrice: parseFloat(item.purchasePrice),
+                category: item.category,
+                status: item.status
+            }));
+            console.log(`Data loaded successfully. Total items: ${inventoryData.length}`);
+        } else {
+            throw new Error(result.error || "Failed to parse data from Google Sheet");
+        }
 
         renderTable();
 
@@ -133,20 +140,31 @@ async function handleAddItem(event) {
 
     // --- API CALL: Create/Append new item ---
     try {
-        // In a real app, this API call would send the newItem data to append a row
-        // Example: const response = await fetch(`${API_URL}/create`, { method: 'POST', body: JSON.stringify(newItem) });
-        // After successful API call, we update the local data:
+        const response = await fetch(API_URL, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                action: 'create',
+                data: newItem
+            })
+        });
         
-        // Simulation of adding an item:
-        const newId = inventoryData.length > 0 ? Math.max(...inventoryData.map(i => i.id)) + 1 : 1;
-        inventoryData.push({...newItem, id: newId});
-        console.log(`Item added (ID: ${newId}).`);
-
-        form.reset();
-        renderTable();
+        const result = await response.json();
+        
+        if (result.success) {
+            newItem.id = result.id;
+            inventoryData.push(newItem);
+            console.log(`Item added successfully (ID: ${result.id}).`);
+            form.reset();
+            renderTable();
+        } else {
+            throw new Error(result.error || "Failed to add item");
+        }
     } catch (error) {
         console.error("Failed to add item:", error);
-        alert("Failed to save item to Google Sheet.");
+        alert("Failed to save item to Google Sheet: " + error.message);
     }
 }
 
@@ -211,19 +229,33 @@ async function handleSave(button) {
 
     // --- API CALL: Update existing item ---
     try {
-        // In a real app, this API call would send the updatedItem data and the itemId to update the row
-        // Example: const response = await fetch(`${API_URL}/update`, { method: 'PUT', body: JSON.stringify(updatedItem) });
+        const response = await fetch(API_URL, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                action: 'update',
+                id: itemId,
+                data: updatedItem
+            })
+        });
         
-        // Simulation of updating an item:
-        inventoryData[itemIndex] = updatedItem;
-        console.log(`Item ID ${itemId} updated.`);
-
-        row.classList.remove('editing');
-        renderTable();
+        const result = await response.json();
+        
+        if (result.success) {
+            inventoryData[itemIndex] = updatedItem;
+            console.log(`Item ID ${itemId} updated successfully.`);
+            row.classList.remove('editing');
+            renderTable();
+        } else {
+            throw new Error(result.error || "Failed to update item");
+        }
         
     } catch (error) {
         console.error("Failed to save item:", error);
-        alert("Failed to update item in Google Sheet.");
+        alert("Failed to update item in Google Sheet: " + error.message);
+        renderTable();
     } finally {
         document.querySelectorAll('.edit-btn').forEach(btn => btn.classList.remove('disabled'));
     }
@@ -247,16 +279,28 @@ async function handleRemove(button) {
 
     // --- API CALL: Delete item ---
     try {
-        // In a real app, this API call would send the itemId to delete the corresponding row
-        // Example: const response = await fetch(`${API_URL}/delete?id=${itemId}`, { method: 'DELETE' });
+        const response = await fetch(API_URL, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                action: 'delete',
+                id: itemId
+            })
+        });
         
-        // Simulation of removing an item:
-        inventoryData.splice(itemIndex, 1);
-        console.log(`Item ID ${itemId} removed.`);
+        const result = await response.json();
         
-        renderTable();
+        if (result.success) {
+            inventoryData.splice(itemIndex, 1);
+            console.log(`Item ID ${itemId} removed successfully.`);
+            renderTable();
+        } else {
+            throw new Error(result.error || "Failed to delete item");
+        }
     } catch (error) {
         console.error("Failed to remove item:", error);
-        alert("Failed to delete item from Google Sheet.");
+        alert("Failed to delete item from Google Sheet: " + error.message);
     }
 }
