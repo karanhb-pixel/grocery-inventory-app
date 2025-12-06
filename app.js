@@ -120,14 +120,22 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 /**
  * Handle Netlify environment detection after configuration loading
+ * TEMPORARY FIX: Skip Netlify proxy to avoid environment variable issues
  */
 function handleNetlifyEnvironment() {
     if (typeof window !== 'undefined' && window.location && window.location.hostname) {
         const hostname = window.location.hostname;
-        // Check for actual Netlify domains (not localhost)
+        // Check for actual Netlify domains
         if (hostname.endsWith('netlify.app') || hostname.endsWith('netlify.com')) {
-            // Only use Netlify proxy if we don't have a specific API_URL from .env
-            // and the current API_URL looks like a direct Google Apps Script URL
+            console.log('🔄 Detected Netlify environment, using direct API calls (proxy disabled for testing)');
+            console.log('API_URL:', API_URL);
+            console.log('💡 To enable proxy: Set API_URL environment variable in Netlify dashboard');
+            
+            // TEMPORARY: Skip Netlify proxy to avoid environment variable issues
+            // TODO: Remove this line and uncomment proxy logic below when environment is configured
+            
+            // Original proxy logic (commented out for now):
+            /*
             if (API_URL.includes('script.google.com') && !API_URL.startsWith('/')) {
                 const originalAPI_URL = API_URL;
                 API_URL = '/.netlify/functions/sheets';
@@ -135,6 +143,7 @@ function handleNetlifyEnvironment() {
                 console.log('Original API_URL:', originalAPI_URL);
                 console.log('New API_URL:', API_URL);
             }
+            */
         }
     }
 }
