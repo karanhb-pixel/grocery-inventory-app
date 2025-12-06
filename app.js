@@ -2,10 +2,47 @@
 // 1. Configuration (MUST BE UPDATED ACCORDING TO README.MD INSTRUCTIONS)
 // ==============================================================================
 
-// PLACEHOLDERS: These variables would be set after you configure the Google Sheets API
-const API_URL = 'https://script.google.com/macros/s/AKfycbzYqLnwRXdH2GcK2F-MfTxrpZVPSLyHjd8CkoPdjSUvIFuIZbCWX_0OnuDcHPRWZXxS/exec'; 
-const SPREADSHEET_ID = '1d8bG3SMD6RwJJdrXs70faPyWB6Y1w6TN1jO-oClHdyA'; // Your sheet ID
-const SHEET_NAME = 'Sheet1'; // Assuming default sheet name
+// PLACEHOLDERS: These variables can be provided via the local `.env` file
+// `loadEnv()` will attempt to read `/ .env` at runtime and override these defaults.
+let API_URL = 'https://script.google.com/macros/s/AKfycbzYqLnwRXdH2GcK2F-MfTxrpZVPSLyHjd8CkoPdjSUvIFuIZbCWX_0OnuDcHPRWZXxS/exec'; // default Web App URL
+let SPREADSHEET_ID = '1d8bG3SMD6RwJJdrXs70faPyWB6Y1w6TN1jO-oClHdyA'; // default sheet ID
+let SHEET_NAME = 'Sheet1'; // default sheet name
+
+// If running on Netlify, prefer the serverless proxy which adds CORS headers.
+if (typeof window !== 'undefined' && window.location && window.location.hostname && window.location.hostname.endsWith('netlify.app')) {
+    API_URL = '/.netlify/functions/sheets';
+}
+
+/**
+ * Try to load configuration from a `.env` file served at the web root.
+ * This is a simple, optional runtime convenience for static sites.
+ * If `.env` is not available (or fetch fails), defaults above are used.
+ */
+async function loadEnv() {
+    try {
+        const resp = await fetch('/.env');
+        if (!resp.ok) return; // can't load .env in this environment
+        const text = await resp.text();
+        const lines = text.split(/\r?\n/);
+        for (const raw of lines) {
+            const line = raw.trim();
+            if (!line || line.startsWith('#')) continue;
+            const idx = line.indexOf('=');
+            if (idx === -1) continue;
+            const key = line.slice(0, idx).trim();
+            const val = line.slice(idx + 1).trim();
+            switch (key) {
+                case 'API_URL': API_URL = val; break;
+                case 'SPREADSHEET_ID': SPREADSHEET_ID = val; break;
+                case 'SHEET_NAME': SHEET_NAME = val; break;
+                default: break;
+            }
+        }
+        console.log('Config loaded from /.env');
+    } catch (e) {
+        console.warn('No /.env available or failed to load. Using defaults.');
+    }
+}
 
 // ==============================================================================
 // 2. Global State & Initialization
@@ -14,12 +51,13 @@ const SHEET_NAME = 'Sheet1'; // Assuming default sheet name
 let inventoryData = [];
 let currentSort = 'name'; // 'name' or 'category'
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
     // 1. Set up event listeners
     document.getElementById('item-form').addEventListener('submit', handleAddItem);
     document.getElementById('toggle-sort').addEventListener('click', handleSortToggle);
     
-    // 2. Load the initial data (Simulated fetch)
+    // 2. Try to load .env config (optional) then fetch data
+    await loadEnv();
     fetchData(); 
 });
 

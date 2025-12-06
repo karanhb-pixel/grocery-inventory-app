@@ -11,13 +11,16 @@ const PRIMARY_KEY = 'ID'; // Column used for unique identification (must be 'ID'
 // --- END CONFIGURATION ---
 
 /**
- * Global function to return data as a JSON response.
+ * Global function to return data as a JSON response with CORS headers.
  * @param {object} obj - The JavaScript object to be returned as JSON.
  * @return {GoogleAppsScript.Content.TextOutput} 
  */
 function jsonResponse(obj) {
   return ContentService.createTextOutput(JSON.stringify(obj))
-    .setMimeType(ContentService.MimeType.JSON);
+    .setMimeType(ContentService.MimeType.JSON)
+    .setHeader('Access-Control-Allow-Origin', '*')
+    .setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
+    .setHeader('Access-Control-Allow-Headers', 'Content-Type');
 }
 
 /**
@@ -34,6 +37,18 @@ function doGet(e) {
 }
 
 /**
+ * Handles OPTIONS requests (CORS preflight).
+ * @return {GoogleAppsScript.Content.TextOutput} Empty response with CORS headers.
+ */
+function doOptions(e) {
+  return ContentService.createTextOutput()
+    .setMimeType(ContentService.MimeType.TEXT_PLAIN)
+    .setHeader('Access-Control-Allow-Origin', '*')
+    .setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
+    .setHeader('Access-Control-Allow-Headers', 'Content-Type');
+}
+
+/**
  * Handles POST requests (used for Create, Update, and Delete operations).
  * The action must be specified in the request body (e.g., { action: 'create', data: {...} }).
  * @param {GoogleAppsScript.Events.DoPost} e - Event object containing request body.
@@ -45,7 +60,7 @@ function doPost(e) {
     lock.waitLock(30000); // Wait 30 seconds for lock
 
     if (!e.postData || !e.postData.contents) {
-      throw new Error('No data provided in the request body.');
+      return jsonResponse({ success: false, error: 'No data provided in the request body.' });
     }
 
     const request = JSON.parse(e.postData.contents);
@@ -53,7 +68,7 @@ function doPost(e) {
     const data = request.data;
     
     if (!action) {
-      throw new Error('Action field is missing in the request body.');
+      return jsonResponse({ success: false, error: 'Action field is missing in the request body.' });
     }
 
     switch (action) {
@@ -62,9 +77,9 @@ function doPost(e) {
       case 'UPDATE':
         return jsonResponse(updateData(data));
       case 'DELETE':
-        return jsonResponse(deleteData(request.itemId));
+        return jsonResponse(deleteData(request.id));
       default:
-        throw new Error('Invalid action specified: ' + action);
+        return jsonResponse({ success: false, error: 'Invalid action specified: ' + action });
     }
   } catch (error) {
     return jsonResponse({ success: false, error: error.message });
