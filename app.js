@@ -8,10 +8,7 @@ let API_URL = '';
 let SPREADSHEET_ID = '';
 let SHEET_NAME = '';
 
-// If running on Netlify, prefer the serverless proxy which adds CORS headers.
-if (typeof window !== 'undefined' && window.location && window.location.hostname && window.location.hostname.endsWith('netlify.app')) {
-    API_URL = '/.netlify/functions/sheets';
-}
+// Netlify detection will be handled after loadEnv() to respect .env configuration
 
 /**
  * Load configuration from `.env` file with fallback support.
@@ -111,10 +108,36 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('item-form').addEventListener('submit', handleAddItem);
     document.getElementById('toggle-sort').addEventListener('click', handleSortToggle);
     
-    // 2. Try to load .env config (optional) then fetch data
+    // 2. Load configuration from .env file (with fallback)
     await loadEnv();
+    
+    // 3. Handle Netlify environment detection (after config loading)
+    handleNetlifyEnvironment();
+    
+    // 4. Fetch data from Google Sheets
     fetchData(); 
 });
+
+/**
+ * Handle Netlify environment detection after configuration loading
+ */
+function handleNetlifyEnvironment() {
+    if (typeof window !== 'undefined' && window.location && window.location.hostname) {
+        const hostname = window.location.hostname;
+        // Check for actual Netlify domains (not localhost)
+        if (hostname.endsWith('netlify.app') || hostname.endsWith('netlify.com')) {
+            // Only use Netlify proxy if we don't have a specific API_URL from .env
+            // and the current API_URL looks like a direct Google Apps Script URL
+            if (API_URL.includes('script.google.com') && !API_URL.startsWith('/')) {
+                const originalAPI_URL = API_URL;
+                API_URL = '/.netlify/functions/sheets';
+                console.log('🔄 Detected Netlify environment, using serverless proxy');
+                console.log('Original API_URL:', originalAPI_URL);
+                console.log('New API_URL:', API_URL);
+            }
+        }
+    }
+}
 
 // ==============================================================================
 // 3. Data Fetching and Sorting Logic
