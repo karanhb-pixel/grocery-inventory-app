@@ -1,200 +1,91 @@
 // ==============================================================================
-// 1. Configuration (MUST BE UPDATED ACCORDING TO README.MD INSTRUCTIONS)
+// Grocery Inventory Tracker - localStorage Version
 // ==============================================================================
 
-// Configuration variables - MUST be loaded from .env file
-// These will be populated by loadEnv() function
-let API_URL = '';
-let SPREADSHEET_ID = '';
-let SHEET_NAME = '';
-
-// Netlify detection will be handled after loadEnv() to respect .env configuration
-
-/**
- * Load configuration from `.env` file with fallback support.
- * Tries to load from .env file, falls back to defaults if not available.
- */
-async function loadEnv() {
-    try {
-        const resp = await fetch('/.env');
-        if (!resp.ok) {
-            console.warn('⚠️ .env file not found, using fallback configuration');
-            return loadFallbackConfig();
-        }
-        
-        const text = await resp.text();
-        const lines = text.split(/\r?\n/);
-        let loadedConfig = {};
-        
-        for (const raw of lines) {
-            const line = raw.trim();
-            if (!line || line.startsWith('#')) continue;
-            const idx = line.indexOf('=');
-            if (idx === -1) continue;
-            const key = line.slice(0, idx).trim();
-            const val = line.slice(idx + 1).trim();
-            loadedConfig[key] = val;
-        }
-        
-        // Set configuration values
-        API_URL = loadedConfig.API_URL || '';
-        SPREADSHEET_ID = loadedConfig.SPREADSHEET_ID || '';
-        SHEET_NAME = loadedConfig.SHEET_NAME || '';
-        
-        // Validate required configuration
-        const missing = [];
-        if (!API_URL) missing.push('API_URL');
-        if (!SPREADSHEET_ID) missing.push('SPREADSHEET_ID');
-        if (!SHEET_NAME) missing.push('SHEET_NAME');
-        
-        if (missing.length > 0) {
-            console.warn('⚠️ Missing configuration in .env file, using fallback for:', missing.join(', '));
-            loadFallbackConfig(missing);
-            return;
-        }
-        
-        console.log('✅ Configuration loaded successfully from /.env');
-        console.log('API_URL:', API_URL);
-        console.log('SPREADSHEET_ID:', SPREADSHEET_ID);
-        console.log('SHEET_NAME:', SHEET_NAME);
-        
-    } catch (e) {
-        console.warn('⚠️ Error loading .env file, using fallback configuration:', e.message);
-        loadFallbackConfig();
-    }
-}
-
-/**
- * Load fallback configuration for local development
- */
-function loadFallbackConfig(missingFields = []) {
-    // Default fallback values (replace with your actual values)
-    const fallbackConfig = {
-        API_URL: 'https://script.google.com/macros/s/AKfycbzYqLnwRXdH2GcK2F-MfTxrpZVPSLyHjd8CkoPdjSUvIFuIZbCWX_0OnuDcHPRWZXxS/exec',
-        SPREADSHEET_ID: '1QrKBOIctDYxLg-XNYP3uNLmxiSaHOW0WLN3GPrB3MYLg8-9P0leaSIzY',
-        SHEET_NAME: 'Sheet1'
-    };
-    
-    // Use fallback values for missing fields
-    if (!API_URL || missingFields.includes('API_URL')) {
-        API_URL = fallbackConfig.API_URL;
-    }
-    if (!SPREADSHEET_ID || missingFields.includes('SPREADSHEET_ID')) {
-        SPREADSHEET_ID = fallbackConfig.SPREADSHEET_ID;
-    }
-    if (!SHEET_NAME || missingFields.includes('SHEET_NAME')) {
-        SHEET_NAME = fallbackConfig.SHEET_NAME;
-    }
-    
-    console.log('🔄 Using fallback configuration');
-    console.log('API_URL:', API_URL);
-    console.log('SPREADSHEET_ID:', SPREADSHEET_ID);
-    console.log('SHEET_NAME:', SHEET_NAME);
-    
-    if (missingFields.length > 0) {
-        console.warn('⚠️ Missing fields in .env file, used fallback values for:', missingFields.join(', '));
-    }
-}
-
 // ==============================================================================
-// 2. Global State & Initialization
+// 1. Global State & Initialization
 // ==============================================================================
 
 let inventoryData = [];
 let currentSort = 'name'; // 'name' or 'category'
+let nextId = 1;
+
+// localStorage key
+const STORAGE_KEY = 'grocery_inventory_data';
 
 document.addEventListener('DOMContentLoaded', async () => {
     // 1. Set up event listeners
     document.getElementById('item-form').addEventListener('submit', handleAddItem);
     document.getElementById('toggle-sort').addEventListener('click', handleSortToggle);
     
-    // 2. Load configuration from .env file (with fallback)
-    await loadEnv();
+    // 2. Initialize Google Sheets
+    await initializeGoogleSheets();
     
-    // 3. Handle Netlify environment detection (after config loading)
-    handleNetlifyEnvironment();
+    // 3. Load data from localStorage
+    loadDataFromStorage();
     
-    // 4. Fetch data from Google Sheets
-    fetchData(); 
+    // 4. Render the table
+    renderTable();
 });
 
+// ==============================================================================
+// 2. localStorage Data Management
+// ==============================================================================
+
 /**
- * Handle Netlify environment detection after configuration loading
- * TEMPORARY FIX: Skip Netlify proxy to avoid environment variable issues
+ * Load data from localStorage
  */
-function handleNetlifyEnvironment() {
-    if (typeof window !== 'undefined' && window.location && window.location.hostname) {
-        const hostname = window.location.hostname;
-        // Check for actual Netlify domains
-        if (hostname.endsWith('netlify.app') || hostname.endsWith('netlify.com')) {
-            console.log('🔄 Detected Netlify environment, using direct API calls (proxy disabled for testing)');
-            console.log('API_URL:', API_URL);
-            console.log('💡 To enable proxy: Set API_URL environment variable in Netlify dashboard');
-            
-            // TEMPORARY: Skip Netlify proxy to avoid environment variable issues
-            // TODO: Remove this line and uncomment proxy logic below when environment is configured
-            
-            // Original proxy logic (commented out for now):
-            /*
-            if (API_URL.includes('script.google.com') && !API_URL.startsWith('/')) {
-                const originalAPI_URL = API_URL;
-                API_URL = '/.netlify/functions/sheets';
-                console.log('🔄 Detected Netlify environment, using serverless proxy');
-                console.log('Original API_URL:', originalAPI_URL);
-                console.log('New API_URL:', API_URL);
-            }
-            */
-        }
-    }
-}
-
-// ==============================================================================
-// 3. Data Fetching and Sorting Logic
-// ==============================================================================
-
-// Fetches data from the Google Sheet via the configured API endpoint
-async function fetchData() {
-    console.log("Attempting to fetch data from Google Sheet...");
+function loadDataFromStorage() {
     try {
-        const response = await fetch(`${API_URL}?action=read`);
-
-        if (!response.ok) {
-            const text = await response.text();
-            console.error('Non-OK response from API:', response.status, text);
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-
-        // Read raw text first so we can log HTML or errors returned by the endpoint
-        const raw = await response.text();
-        let result;
-        try {
-            result = JSON.parse(raw);
-        } catch (err) {
-            console.error('Failed to parse JSON from API. Raw response below:\n', raw);
-            throw new Error('Invalid JSON from API: ' + err.message);
-        }
-        
-        if (result.success && Array.isArray(result.data)) {
-            inventoryData = result.data.map(item => ({
-                id: item.id,
-                name: item.name,
-                price: parseFloat(item.price),
-                purchasePrice: parseFloat(item.purchasePrice),
-                category: item.category,
-                status: item.status
-            }));
-            console.log(`Data loaded successfully. Total items: ${inventoryData.length}`);
+        const storedData = localStorage.getItem(STORAGE_KEY);
+        if (storedData) {
+            inventoryData = JSON.parse(storedData);
+            // Find the next available ID
+            if (inventoryData.length > 0) {
+                nextId = Math.max(...inventoryData.map(item => parseInt(item.id))) + 1;
+            }
+            console.log(`Data loaded from localStorage. Total items: ${inventoryData.length}`);
         } else {
-            throw new Error(result.error || "Failed to parse data from Google Sheet");
+            console.log('No data found in localStorage. Starting with empty inventory.');
+            inventoryData = [];
+            nextId = 1;
         }
-
-        renderTable();
-
     } catch (error) {
-        console.error("Error fetching inventory data:", error);
-        alert("Failed to load inventory. Please check the console and your API configuration.");
+        console.error('Error loading data from localStorage:', error);
+        inventoryData = [];
+        nextId = 1;
     }
 }
+
+/**
+ * Save data to localStorage
+ */
+function saveDataToStorage() {
+    try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(inventoryData));
+        console.log('Data saved to localStorage successfully.');
+    } catch (error) {
+        console.error('Error saving data to localStorage:', error);
+        alert('Failed to save data. Please check if localStorage is available.');
+    }
+}
+
+/**
+ * Clear all data from localStorage
+ */
+function clearAllData() {
+    if (confirm('Are you sure you want to clear all data? This cannot be undone.')) {
+        localStorage.removeItem(STORAGE_KEY);
+        inventoryData = [];
+        nextId = 1;
+        renderTable();
+        console.log('All data cleared from localStorage.');
+    }
+}
+
+// ==============================================================================
+// 3. Data Sorting and Rendering Logic
+// ==============================================================================
 
 function handleSortToggle() {
     if (currentSort === 'name') {
@@ -253,14 +144,15 @@ function renderTable() {
 }
 
 // ==============================================================================
-// 4. CRUD Operations (Connect to API)
+// 4. CRUD Operations (localStorage-based)
 // ==============================================================================
 
-async function handleAddItem(event) {
+function handleAddItem(event) {
     event.preventDefault();
     const form = event.target;
     
     const newItem = {
+        id: nextId++,
         name: form.itemName.value.trim(),
         price: parseFloat(form.sellingPrice.value),
         purchasePrice: parseFloat(form.purchasePrice.value),
@@ -273,34 +165,16 @@ async function handleAddItem(event) {
         return;
     }
 
-    // --- API CALL: Create/Append new item ---
-    try {
-        const response = await fetch(API_URL, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                action: 'create',
-                data: newItem
-            })
-        });
-        
-        const result = await response.json();
-        
-        if (result.success) {
-            newItem.id = result.id;
-            inventoryData.push(newItem);
-            console.log(`Item added successfully (ID: ${result.id}).`);
-            form.reset();
-            renderTable();
-        } else {
-            throw new Error(result.error || "Failed to add item");
-        }
-    } catch (error) {
-        console.error("Failed to add item:", error);
-        alert("Failed to save item to Google Sheet: " + error.message);
-    }
+    // Add to inventory and save
+    inventoryData.push(newItem);
+    saveDataToStorage();
+    
+    console.log(`Item added successfully (ID: ${newItem.id}).`);
+    form.reset();
+    renderTable();
+    
+    // Auto-sync to Google Sheets if configured
+    autoSyncToSheets();
 }
 
 // --- Inline Edit Logic ---
@@ -341,18 +215,18 @@ function startEditing(row) {
     `;
 }
 
-async function handleSave(button) {
+function handleSave(button) {
     const row = button.closest('tr');
     const cells = row.cells;
     const itemId = row.dataset.itemId;
     const itemIndex = inventoryData.findIndex(i => i.id == itemId);
 
     const updatedItem = {
+        id: parseInt(itemId),
         name: cells[0].querySelector('input[data-field="name"]').value.trim(),
         price: parseFloat(cells[1].querySelector('input[data-field="price"]').value),
         purchasePrice: parseFloat(cells[2].querySelector('input[data-field="purchasePrice"]').value),
         category: cells[3].querySelector('select[data-field="category"]').value,
-        id: parseInt(itemId),
         status: inventoryData[itemIndex].status
     };
 
@@ -362,38 +236,19 @@ async function handleSave(button) {
         return;
     }
 
-    // --- API CALL: Update existing item ---
-    try {
-        const response = await fetch(API_URL, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                action: 'update',
-                id: itemId,
-                data: updatedItem
-            })
-        });
-        
-        const result = await response.json();
-        
-        if (result.success) {
-            inventoryData[itemIndex] = updatedItem;
-            console.log(`Item ID ${itemId} updated successfully.`);
-            row.classList.remove('editing');
-            renderTable();
-        } else {
-            throw new Error(result.error || "Failed to update item");
-        }
-        
-    } catch (error) {
-        console.error("Failed to save item:", error);
-        alert("Failed to update item in Google Sheet: " + error.message);
-        renderTable();
-    } finally {
-        document.querySelectorAll('.edit-btn').forEach(btn => btn.classList.remove('disabled'));
-    }
+    // Update in memory and save
+    inventoryData[itemIndex] = updatedItem;
+    saveDataToStorage();
+    
+    console.log(`Item ID ${itemId} updated successfully.`);
+    row.classList.remove('editing');
+    renderTable();
+    
+    // Auto-sync to Google Sheets if configured
+    autoSyncToSheets();
+    
+    // Re-enable edit buttons
+    document.querySelectorAll('.edit-btn').forEach(btn => btn.classList.remove('disabled'));
 }
 
 function handleCancel(button) {
@@ -403,7 +258,7 @@ function handleCancel(button) {
     renderTable();
 }
 
-async function handleRemove(button) {
+function handleRemove(button) {
     if (!confirm("Are you sure you want to remove this item permanently?")) {
         return;
     }
@@ -412,30 +267,472 @@ async function handleRemove(button) {
     const itemId = row.dataset.itemId;
     const itemIndex = inventoryData.findIndex(i => i.id == itemId);
 
-    // --- API CALL: Delete item ---
+    // Remove from memory and save
+    inventoryData.splice(itemIndex, 1);
+    saveDataToStorage();
+    
+    console.log(`Item ID ${itemId} removed successfully.`);
+    renderTable();
+    
+    // Auto-sync to Google Sheets if configured
+    autoSyncToSheets();
+}
+
+// ==============================================================================
+// 5. Utility Functions
+// ==============================================================================
+
+/**
+ * Export data to JSON file
+ */
+function exportData() {
+    const dataStr = JSON.stringify(inventoryData, null, 2);
+    const dataBlob = new Blob([dataStr], {type: 'application/json'});
+    const url = URL.createObjectURL(dataBlob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `grocery_inventory_${new Date().toISOString().split('T')[0]}.json`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    console.log('Data exported successfully.');
+}
+
+/**
+ * Import data from JSON file
+ */
+function importData(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        try {
+            const importedData = JSON.parse(e.target.result);
+            if (Array.isArray(importedData)) {
+                if (confirm('This will replace all existing data. Continue?')) {
+                    inventoryData = importedData;
+                    // Update nextId
+                    if (inventoryData.length > 0) {
+                        nextId = Math.max(...inventoryData.map(item => parseInt(item.id))) + 1;
+                    } else {
+                        nextId = 1;
+                    }
+                    saveDataToStorage();
+                    renderTable();
+                    console.log('Data imported successfully.');
+                }
+            } else {
+                alert('Invalid file format. Please select a JSON file containing an array of items.');
+            }
+        } catch (error) {
+            alert('Error reading file: ' + error.message);
+        }
+    };
+    reader.readAsText(file);
+    
+    // Clear the file input
+    event.target.value = '';
+}
+
+/**
+ * Export data to CSV file
+ */
+function exportToCSV() {
+    if (inventoryData.length === 0) {
+        alert('No data to export.');
+        return;
+    }
+
+    // Create CSV header
+    const headers = ['ID', 'Name', 'Selling Price', 'Purchase Price', 'Category', 'Status'];
+    
+    // Create CSV rows
+    const csvRows = [headers.join(',')];
+    
+    inventoryData.forEach(item => {
+        const row = [
+            item.id,
+            `"${item.name.replace(/"/g, '""')}"`, // Escape quotes
+            item.price,
+            item.purchasePrice,
+            `"${item.category.replace(/"/g, '""')}"`, // Escape quotes
+            item.status
+        ];
+        csvRows.push(row.join(','));
+    });
+    
+    // Create and download CSV file
+    const csvContent = csvRows.join('\n');
+    const csvBlob = new Blob([csvContent], {type: 'text/csv;charset=utf-8;'});
+    const csvUrl = URL.createObjectURL(csvBlob);
+    const csvLink = document.createElement('a');
+    csvLink.href = csvUrl;
+    csvLink.download = `grocery_inventory_${new Date().toISOString().split('T')[0]}.csv`;
+    document.body.appendChild(csvLink);
+    csvLink.click();
+    document.body.removeChild(csvLink);
+    URL.revokeObjectURL(csvUrl);
+    
+    console.log('Data exported to CSV successfully.');
+}
+
+/**
+ * Import data from CSV file
+ */
+function importFromCSV(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        try {
+            const csvContent = e.target.result;
+            const lines = csvContent.trim().split('\n');
+            
+            if (lines.length < 2) {
+                alert('CSV file must contain at least a header row and one data row.');
+                return;
+            }
+            
+            // Parse header row
+            const headers = lines[0].split(',');
+            if (headers.length < 6) {
+                alert('CSV must contain columns: ID, Name, Selling Price, Purchase Price, Category, Status');
+                return;
+            }
+            
+            // Parse data rows
+            const importedData = [];
+            for (let i = 1; i < lines.length; i++) {
+                const line = lines[i].trim();
+                if (!line) continue; // Skip empty lines
+                
+                // Simple CSV parsing (handles quoted fields)
+                const values = [];
+                let currentValue = '';
+                let inQuotes = false;
+                
+                for (let j = 0; j < line.length; j++) {
+                    const char = line[j];
+                    if (char === '"') {
+                        inQuotes = !inQuotes;
+                    } else if (char === ',' && !inQuotes) {
+                        values.push(currentValue.trim());
+                        currentValue = '';
+                    } else {
+                        currentValue += char;
+                    }
+                }
+                values.push(currentValue.trim()); // Add the last value
+                
+                if (values.length >= 6) {
+                    const item = {
+                        id: parseInt(values[0]) || 0,
+                        name: values[1].replace(/^"|"$/g, '').replace(/""/g, '"'), // Remove quotes and unescape
+                        price: parseFloat(values[2]) || 0,
+                        purchasePrice: parseFloat(values[3]) || 0,
+                        category: values[4].replace(/^"|"$/g, '').replace(/""/g, '"'), // Remove quotes and unescape
+                        status: values[5] || 'Active'
+                    };
+                    
+                    // Validate required fields
+                    if (item.name && !isNaN(item.price) && !isNaN(item.purchasePrice) && item.category) {
+                        importedData.push(item);
+                    }
+                }
+            }
+            
+            if (importedData.length === 0) {
+                alert('No valid data found in CSV file. Please check the format.');
+                return;
+            }
+            
+            if (confirm(`Found ${importedData.length} items in CSV. This will replace all existing data. Continue?`)) {
+                inventoryData = importedData;
+                // Update nextId
+                if (inventoryData.length > 0) {
+                    nextId = Math.max(...inventoryData.map(item => parseInt(item.id))) + 1;
+                } else {
+                    nextId = 1;
+                }
+                saveDataToStorage();
+                renderTable();
+                console.log('Data imported from CSV successfully.');
+            }
+            
+        } catch (error) {
+            alert('Error reading CSV file: ' + error.message);
+        }
+    };
+    reader.readAsText(file);
+    
+    // Clear the file input
+    event.target.value = '';
+}
+
+
+
+// ==============================================================================
+// 7. Google Sheets Integration (Hardcoded Access)
+// ==============================================================================
+
+/**
+ * Google Sheets API Configuration
+ * Replace these values with your actual credentials
+ */
+const GOOGLE_SHEETS_CONFIG = {
+    // Option 1: Service Account (Recommended)
+    serviceAccountEmail: 'your-service-account@your-project.iam.gserviceaccount.com',
+    privateKey: '-----BEGIN PRIVATE KEY-----\nYOUR_PRIVATE_KEY_HERE\n-----END PRIVATE KEY-----\n',
+    
+    // Option 2: OAuth Access Token (Alternative)
+    accessToken: 'YOUR_OAUTH_ACCESS_TOKEN_HERE',
+    
+    // Your Google Sheet ID (from the URL)
+    spreadsheetId: 'YOUR_SPREADSHEET_ID_HERE',
+    
+    // Sheet name (tab name in your spreadsheet)
+    sheetName: 'Sheet1'
+};
+
+/**
+ * Google Sheets API endpoints
+ */
+const SHEETS_API_BASE = 'https://sheets.googleapis.com/v4/spreadsheets';
+
+/**
+ * Initialize Google Sheets connection
+ */
+async function initializeGoogleSheets() {
     try {
-        const response = await fetch(API_URL, {
-            method: 'POST',
+        console.log('Initializing Google Sheets connection...');
+        
+        // Check if configuration is set
+        if (GOOGLE_SHEETS_CONFIG.spreadsheetId === 'YOUR_SPREADSHEET_ID_HERE') {
+            console.warn('Google Sheets not configured. Using demo mode.');
+            showSheetsStatus('Demo mode - configure Google Sheets to enable sync', 'warning');
+            return false;
+        }
+        
+        // Test connection by getting sheet info
+        const response = await fetch(`${SHEETS_API_BASE}/${GOOGLE_SHEETS_CONFIG.spreadsheetId}`, {
             headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                action: 'delete',
-                id: itemId
-            })
+                'Authorization': `Bearer ${GOOGLE_SHEETS_CONFIG.accessToken}`,
+                'Content-Type': 'application/json'
+            }
         });
         
-        const result = await response.json();
-        
-        if (result.success) {
-            inventoryData.splice(itemIndex, 1);
-            console.log(`Item ID ${itemId} removed successfully.`);
-            renderTable();
+        if (response.ok) {
+            console.log('✅ Google Sheets connection successful');
+            showSheetsStatus('Connected to Google Sheets', 'success');
+            return true;
         } else {
-            throw new Error(result.error || "Failed to delete item");
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
         }
+        
     } catch (error) {
-        console.error("Failed to remove item:", error);
-        alert("Failed to delete item from Google Sheet: " + error.message);
+        console.error('❌ Google Sheets connection failed:', error);
+        showSheetsStatus('Google Sheets connection failed', 'error');
+        return false;
     }
 }
+
+/**
+ * Sync localStorage data to Google Sheets
+ */
+async function syncToGoogleSheets() {
+    if (inventoryData.length === 0) {
+        console.log('No data to sync');
+        showSheetsStatus('No data to sync', 'info');
+        return;
+    }
+    
+    try {
+        showSheetsStatus('Syncing to Google Sheets...', 'loading');
+        
+        // Prepare data for sheets (convert to 2D array)
+        const headers = ['ID', 'Name', 'Selling Price', 'Purchase Price', 'Category', 'Status'];
+        const rows = inventoryData.map(item => [
+            item.id,
+            item.name,
+            item.price,
+            item.purchasePrice,
+            item.category,
+            item.status
+        ]);
+        
+        const values = [headers, ...rows];
+        
+        // Clear existing data and write new data
+        const response = await fetch(
+            `${SHEETS_API_BASE}/${GOOGLE_SHEETS_CONFIG.spreadsheetId}/values/${GOOGLE_SHEETS_CONFIG.sheetName}!A1:F${rows.length + 1}?valueInputOption=RAW`,
+            {
+                method: 'PUT',
+                headers: {
+                    'Authorization': `Bearer ${GOOGLE_SHEETS_CONFIG.accessToken}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    values: values
+                })
+            }
+        );
+        
+        if (response.ok) {
+            console.log('✅ Data synced to Google Sheets successfully');
+            showSheetsStatus(`Synced ${inventoryData.length} items to Google Sheets`, 'success');
+            
+            // Auto-hide success message after 3 seconds
+            setTimeout(() => {
+                hideSheetsStatus();
+            }, 3000);
+        } else {
+            throw new Error(`Sync failed: ${response.status} ${response.statusText}`);
+        }
+        
+    } catch (error) {
+        console.error('❌ Sync to Google Sheets failed:', error);
+        showSheetsStatus('Sync failed: ' + error.message, 'error');
+    }
+}
+
+/**
+ * Load data from Google Sheets to localStorage
+ */
+async function loadFromGoogleSheets() {
+    try {
+        showSheetsStatus('Loading from Google Sheets...', 'loading');
+        
+        const response = await fetch(
+            `${SHEETS_API_BASE}/${GOOGLE_SHEETS_CONFIG.spreadsheetId}/values/${GOOGLE_SHEETS_CONFIG.sheetName}!A2:F`,
+            {
+                headers: {
+                    'Authorization': `Bearer ${GOOGLE_SHEETS_CONFIG.accessToken}`,
+                    'Content-Type': 'application/json'
+                }
+            }
+        );
+        
+        if (response.ok) {
+            const data = await response.json();
+            const values = data.values || [];
+            
+            if (values.length > 0) {
+                // Convert 2D array back to inventory objects
+                inventoryData = values.map(row => ({
+                    id: parseInt(row[0]) || 0,
+                    name: row[1] || '',
+                    price: parseFloat(row[2]) || 0,
+                    purchasePrice: parseFloat(row[3]) || 0,
+                    category: row[4] || '',
+                    status: row[5] || 'Active'
+                })).filter(item => item.name && item.category); // Filter out invalid rows
+                
+                // Update nextId
+                if (inventoryData.length > 0) {
+                    nextId = Math.max(...inventoryData.map(item => parseInt(item.id))) + 1;
+                } else {
+                    nextId = 1;
+                }
+                
+                // Save to localStorage and update UI
+                saveDataToStorage();
+                renderTable();
+                
+                console.log(`✅ Loaded ${inventoryData.length} items from Google Sheets`);
+                showSheetsStatus(`Loaded ${inventoryData.length} items from Google Sheets`, 'success');
+                
+                setTimeout(() => {
+                    hideSheetsStatus();
+                }, 3000);
+            } else {
+                console.log('No data found in Google Sheets');
+                showSheetsStatus('No data found in Google Sheets', 'info');
+            }
+        } else {
+            throw new Error(`Load failed: ${response.status} ${response.statusText}`);
+        }
+        
+    } catch (error) {
+        console.error('❌ Load from Google Sheets failed:', error);
+        showSheetsStatus('Load failed: ' + error.message, 'error');
+    }
+}
+
+/**
+ * Show Google Sheets status message
+ */
+function showSheetsStatus(message, type = 'info') {
+    let statusElement = document.getElementById('sheets-status');
+    
+    if (!statusElement) {
+        statusElement = document.createElement('div');
+        statusElement.id = 'sheets-status';
+        statusElement.className = 'sheets-status';
+        document.querySelector('.auth-section').appendChild(statusElement);
+    }
+    
+    statusElement.textContent = message;
+    statusElement.className = `sheets-status ${type}`;
+    statusElement.style.display = 'block';
+}
+
+/**
+ * Hide Google Sheets status message
+ */
+function hideSheetsStatus() {
+    const statusElement = document.getElementById('sheets-status');
+    if (statusElement) {
+        statusElement.style.display = 'none';
+    }
+}
+
+/**
+ * Auto-sync to Google Sheets when data changes
+ */
+function autoSyncToSheets() {
+    // Debounce sync to avoid too frequent API calls
+    clearTimeout(window.syncTimeout);
+    window.syncTimeout = setTimeout(() => {
+        syncToGoogleSheets();
+    }, 2000); // Wait 2 seconds after last change
+}
+
+// ==============================================================================
+// 8. Mobile Modal Functions
+// ==============================================================================
+
+/**
+ * Toggle data management modal for mobile
+ */
+function toggleDataModal() {
+    const modal = document.getElementById('data-modal');
+    modal.classList.toggle('active');
+    
+    // Prevent body scroll when modal is open
+    if (modal.classList.contains('active')) {
+        document.body.style.overflow = 'hidden';
+    } else {
+        document.body.style.overflow = '';
+    }
+}
+
+// Close modal when clicking outside
+document.addEventListener('click', function(event) {
+    const modal = document.getElementById('data-modal');
+    if (event.target === modal) {
+        toggleDataModal();
+    }
+});
+
+// Close modal with Escape key
+document.addEventListener('keydown', function(event) {
+    if (event.key === 'Escape') {
+        const modal = document.getElementById('data-modal');
+        if (modal.classList.contains('active')) {
+            toggleDataModal();
+        }
+    }
+});
