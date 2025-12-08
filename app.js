@@ -18,8 +18,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('item-form').addEventListener('submit', handleAddItem);
     document.getElementById('toggle-sort').addEventListener('click', handleSortToggle);
     
-    // 2. Initialize Google Sheets
-    await initializeGoogleSheets();
+    // 2. Initialize JSONBin cloud storage
+    await initializeJSONBin();
     
     // 3. Load data from localStorage
     loadDataFromStorage();
@@ -173,8 +173,8 @@ function handleAddItem(event) {
     form.reset();
     renderTable();
     
-    // Auto-sync to Google Sheets if configured
-    autoSyncToSheets();
+    // Auto-sync to JSONBin if configured
+    autoSyncToJSONBin();
 }
 
 // --- Inline Edit Logic ---
@@ -244,8 +244,8 @@ function handleSave(button) {
     row.classList.remove('editing');
     renderTable();
     
-    // Auto-sync to Google Sheets if configured
-    autoSyncToSheets();
+    // Auto-sync to JSONBin if configured
+    autoSyncToJSONBin();
     
     // Re-enable edit buttons
     document.querySelectorAll('.edit-btn').forEach(btn => btn.classList.remove('disabled'));
@@ -274,8 +274,8 @@ function handleRemove(button) {
     console.log(`Item ID ${itemId} removed successfully.`);
     renderTable();
     
-    // Auto-sync to Google Sheets if configured
-    autoSyncToSheets();
+    // Auto-sync to JSONBin if configured
+    autoSyncToJSONBin();
 }
 
 // ==============================================================================
@@ -475,159 +475,130 @@ function importFromCSV(event) {
 
 
 // ==============================================================================
-// 7. Google Sheets Integration (Hardcoded Access)
+// 7. JSONBin.io Integration (Simple & Free Alternative)
 // ==============================================================================
 
 /**
- * Google Sheets API Configuration
- * Replace these values with your actual credentials
+ * JSONBin.io API Configuration
+ * Get your free API key from https://jsonbin.io
  */
-const GOOGLE_SHEETS_CONFIG = {
-    // Option 1: Service Account (Recommended)
-    serviceAccountEmail: 'your-service-account@your-project.iam.gserviceaccount.com',
-    privateKey: '-----BEGIN PRIVATE KEY-----\nYOUR_PRIVATE_KEY_HERE\n-----END PRIVATE KEY-----\n',
+const JSONBIN_CONFIG = {
+    // Your JSONBin API key (X-Master-Key from https://jsonbin.io)
+    apiKey: '$2a$10$hTYGSMnNHzJkNG0id/yRfeJsv2ngrcFYEKfuP7jsJKMmJwh2cvkMW',
     
-    // Option 2: OAuth Access Token (Alternative)
-    accessToken: 'YOUR_OAUTH_ACCESS_TOKEN_HERE',
+    // Your JSONBin bin ID (from the URL when you create a bin)
+    binId: '69344fedae596e708f87a733',
     
-    // Your Google Sheet ID (from the URL)
-    spreadsheetId: 'YOUR_SPREADSHEET_ID_HERE',
-    
-    // Sheet name (tab name in your spreadsheet)
-    sheetName: 'Sheet1'
+    // JSONBin API base URL (DO NOT include bin ID here)
+    baseUrl: 'https://api.jsonbin.io/v3/b'
 };
 
 /**
- * Google Sheets API endpoints
+ * Initialize JSONBin connection
  */
-const SHEETS_API_BASE = 'https://sheets.googleapis.com/v4/spreadsheets';
-
-/**
- * Initialize Google Sheets connection
- */
-async function initializeGoogleSheets() {
+async function initializeJSONBin() {
     try {
-        console.log('Initializing Google Sheets connection...');
+        console.log('Initializing JSONBin connection...');
         
         // Check if configuration is set
-        if (GOOGLE_SHEETS_CONFIG.spreadsheetId === 'YOUR_SPREADSHEET_ID_HERE') {
-            console.warn('Google Sheets not configured. Using demo mode.');
-            showSheetsStatus('Demo mode - configure Google Sheets to enable sync', 'warning');
+        if (JSONBIN_CONFIG.apiKey === 'YOUR_JSONBIN_API_KEY_HERE' || 
+            JSONBIN_CONFIG.binId === 'YOUR_JSONBIN_BIN_ID_HERE') {
+            console.warn('JSONBin not configured. Using demo mode.');
+            showJSONBinStatus('Demo mode - configure JSONBin to enable sync', 'warning');
             return false;
         }
         
-        // Test connection by getting sheet info
-        const response = await fetch(`${SHEETS_API_BASE}/${GOOGLE_SHEETS_CONFIG.spreadsheetId}`, {
+        // Test connection by reading existing data
+        const response = await fetch(`${JSONBIN_CONFIG.baseUrl}/${JSONBIN_CONFIG.binId}/latest`, {
             headers: {
-                'Authorization': `Bearer ${GOOGLE_SHEETS_CONFIG.accessToken}`,
-                'Content-Type': 'application/json'
+                'X-Master-Key': JSONBIN_CONFIG.apiKey
             }
         });
         
         if (response.ok) {
-            console.log('✅ Google Sheets connection successful');
-            showSheetsStatus('Connected to Google Sheets', 'success');
+            console.log('✅ JSONBin connection successful');
+            showJSONBinStatus('Connected to JSONBin', 'success');
             return true;
+        } else if (response.status === 404) {
+            throw new Error('Bin not found. Make sure your bin ID is correct and the bin exists.');
         } else {
             throw new Error(`HTTP ${response.status}: ${response.statusText}`);
         }
         
     } catch (error) {
-        console.error('❌ Google Sheets connection failed:', error);
-        showSheetsStatus('Google Sheets connection failed', 'error');
+        console.error('❌ JSONBin connection failed:', error);
+        showJSONBinStatus('JSONBin connection failed', 'error');
         return false;
     }
 }
 
 /**
- * Sync localStorage data to Google Sheets
+ * Sync localStorage data to JSONBin
  */
-async function syncToGoogleSheets() {
+async function syncToJSONBin() {
     if (inventoryData.length === 0) {
         console.log('No data to sync');
-        showSheetsStatus('No data to sync', 'info');
+        showJSONBinStatus('No data to sync', 'info');
         return;
     }
     
     try {
-        showSheetsStatus('Syncing to Google Sheets...', 'loading');
+        showJSONBinStatus('Syncing to JSONBin...', 'loading');
         
-        // Prepare data for sheets (convert to 2D array)
-        const headers = ['ID', 'Name', 'Selling Price', 'Purchase Price', 'Category', 'Status'];
-        const rows = inventoryData.map(item => [
-            item.id,
-            item.name,
-            item.price,
-            item.purchasePrice,
-            item.category,
-            item.status
-        ]);
-        
-        const values = [headers, ...rows];
-        
-        // Clear existing data and write new data
-        const response = await fetch(
-            `${SHEETS_API_BASE}/${GOOGLE_SHEETS_CONFIG.spreadsheetId}/values/${GOOGLE_SHEETS_CONFIG.sheetName}!A1:F${rows.length + 1}?valueInputOption=RAW`,
-            {
-                method: 'PUT',
-                headers: {
-                    'Authorization': `Bearer ${GOOGLE_SHEETS_CONFIG.accessToken}`,
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    values: values
-                })
-            }
-        );
+        const response = await fetch(`${JSONBIN_CONFIG.baseUrl}/${JSONBIN_CONFIG.binId}`, {
+            method: 'PUT',
+            headers: {
+                'X-Master-Key': JSONBIN_CONFIG.apiKey,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(inventoryData)
+        });
         
         if (response.ok) {
-            console.log('✅ Data synced to Google Sheets successfully');
-            showSheetsStatus(`Synced ${inventoryData.length} items to Google Sheets`, 'success');
+            const result = await response.json();
+            console.log('✅ Data synced to JSONBin successfully');
+            showJSONBinStatus(`Synced ${inventoryData.length} items to JSONBin`, 'success');
             
             // Auto-hide success message after 3 seconds
             setTimeout(() => {
-                hideSheetsStatus();
+                hideJSONBinStatus();
             }, 3000);
         } else {
             throw new Error(`Sync failed: ${response.status} ${response.statusText}`);
         }
         
     } catch (error) {
-        console.error('❌ Sync to Google Sheets failed:', error);
-        showSheetsStatus('Sync failed: ' + error.message, 'error');
+        console.error('❌ Sync to JSONBin failed:', error);
+        showJSONBinStatus('Sync failed: ' + error.message, 'error');
     }
 }
 
 /**
- * Load data from Google Sheets to localStorage
+ * Load data from JSONBin to localStorage
  */
-async function loadFromGoogleSheets() {
+async function loadFromJSONBin() {
     try {
-        showSheetsStatus('Loading from Google Sheets...', 'loading');
+        showJSONBinStatus('Loading from JSONBin...', 'loading');
         
-        const response = await fetch(
-            `${SHEETS_API_BASE}/${GOOGLE_SHEETS_CONFIG.spreadsheetId}/values/${GOOGLE_SHEETS_CONFIG.sheetName}!A2:F`,
-            {
-                headers: {
-                    'Authorization': `Bearer ${GOOGLE_SHEETS_CONFIG.accessToken}`,
-                    'Content-Type': 'application/json'
-                }
+        const response = await fetch(`${JSONBIN_CONFIG.baseUrl}/${JSONBIN_CONFIG.binId}/latest`, {
+            headers: {
+                'X-Master-Key': JSONBIN_CONFIG.apiKey
             }
-        );
+        });
         
         if (response.ok) {
             const data = await response.json();
-            const values = data.values || [];
+            const jsonData = data.record || data; // JSONBin returns {record: [...]}
             
-            if (values.length > 0) {
-                // Convert 2D array back to inventory objects
-                inventoryData = values.map(row => ({
-                    id: parseInt(row[0]) || 0,
-                    name: row[1] || '',
-                    price: parseFloat(row[2]) || 0,
-                    purchasePrice: parseFloat(row[3]) || 0,
-                    category: row[4] || '',
-                    status: row[5] || 'Active'
+            if (Array.isArray(jsonData) && jsonData.length > 0) {
+                // Convert data back to inventory objects
+                inventoryData = jsonData.map(item => ({
+                    id: parseInt(item.id) || 0,
+                    name: item.name || '',
+                    price: parseFloat(item.price) || 0,
+                    purchasePrice: parseFloat(item.purchasePrice) || 0,
+                    category: item.category || '',
+                    status: item.status || 'Active'
                 })).filter(item => item.name && item.category); // Filter out invalid rows
                 
                 // Update nextId
@@ -641,63 +612,63 @@ async function loadFromGoogleSheets() {
                 saveDataToStorage();
                 renderTable();
                 
-                console.log(`✅ Loaded ${inventoryData.length} items from Google Sheets`);
-                showSheetsStatus(`Loaded ${inventoryData.length} items from Google Sheets`, 'success');
+                console.log(`✅ Loaded ${inventoryData.length} items from JSONBin`);
+                showJSONBinStatus(`Loaded ${inventoryData.length} items from JSONBin`, 'success');
                 
                 setTimeout(() => {
-                    hideSheetsStatus();
+                    hideJSONBinStatus();
                 }, 3000);
             } else {
-                console.log('No data found in Google Sheets');
-                showSheetsStatus('No data found in Google Sheets', 'info');
+                console.log('No data found in JSONBin');
+                showJSONBinStatus('No data found in JSONBin', 'info');
             }
         } else {
             throw new Error(`Load failed: ${response.status} ${response.statusText}`);
         }
         
     } catch (error) {
-        console.error('❌ Load from Google Sheets failed:', error);
-        showSheetsStatus('Load failed: ' + error.message, 'error');
+        console.error('❌ Load from JSONBin failed:', error);
+        showJSONBinStatus('Load failed: ' + error.message, 'error');
     }
 }
 
 /**
- * Show Google Sheets status message
+ * Show JSONBin status message
  */
-function showSheetsStatus(message, type = 'info') {
-    let statusElement = document.getElementById('sheets-status');
+function showJSONBinStatus(message, type = 'info') {
+    let statusElement = document.getElementById('jsonbin-status');
     
     if (!statusElement) {
         statusElement = document.createElement('div');
-        statusElement.id = 'sheets-status';
-        statusElement.className = 'sheets-status';
-        document.querySelector('.auth-section').appendChild(statusElement);
+        statusElement.id = 'jsonbin-status';
+        statusElement.className = 'jsonbin-status';
+        document.querySelector('.sheets-sync-section').appendChild(statusElement);
     }
     
     statusElement.textContent = message;
-    statusElement.className = `sheets-status ${type}`;
-    statusElement.style.display = 'block';
+    statusElement.className = `jsonbin-status ${type}`;
+    statusElement.style.display = 'inline-block';
 }
 
 /**
- * Hide Google Sheets status message
+ * Hide JSONBin status message
  */
-function hideSheetsStatus() {
-    const statusElement = document.getElementById('sheets-status');
+function hideJSONBinStatus() {
+    const statusElement = document.getElementById('jsonbin-status');
     if (statusElement) {
         statusElement.style.display = 'none';
     }
 }
 
 /**
- * Auto-sync to Google Sheets when data changes
+ * Auto-sync to JSONBin when data changes
  */
-function autoSyncToSheets() {
+function autoSyncToJSONBin() {
     // Debounce sync to avoid too frequent API calls
-    clearTimeout(window.syncTimeout);
-    window.syncTimeout = setTimeout(() => {
-        syncToGoogleSheets();
-    }, 2000); // Wait 2 seconds after last change
+    clearTimeout(window.jsonbinSyncTimeout);
+    window.jsonbinSyncTimeout = setTimeout(() => {
+        syncToJSONBin();
+    }, 3000); // Wait 3 seconds after last change
 }
 
 // ==============================================================================

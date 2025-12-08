@@ -43,16 +43,35 @@ h1 {
 
 
 
-/* Google Sheets Sync Section */
+/* Cloud Storage Sync Section */
 .sheets-sync-section {
     background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
     border-bottom: 2px solid #e9ecef;
-    padding: 20px 30px;
+    padding: 25px 30px;
     display: flex;
-    gap: 12px;
-    align-items: center;
+    gap: 30px;
+    align-items: flex-start;
     flex-wrap: wrap;
     justify-content: center;
+}
+
+.sync-group {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    align-items: center;
+    min-width: 180px;
+}
+
+.sync-group h4 {
+    margin: 0;
+    color: #495057;
+    font-size: 14px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border-bottom: 2px solid #667eea;
+    padding-bottom: 4px;
 }
 
 .sync-btn {
@@ -85,6 +104,26 @@ h1 {
 .load-from-sheets:hover {
     transform: translateY(-2px);
     box-shadow: 0 8px 25px rgba(40, 167, 69, 0.3);
+}
+
+.sync-to-jsonbin {
+    background: linear-gradient(135deg, #fd7e14 0%, #e55100 100%);
+    color: white;
+}
+
+.sync-to-jsonbin:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(253, 126, 20, 0.3);
+}
+
+.load-from-jsonbin {
+    background: linear-gradient(135deg, #6f42c1 0%, #5a32a3 100%);
+    color: white;
+}
+
+.load-from-jsonbin:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(111, 66, 193, 0.3);
 }
 
 /* Google Sheets Status */
@@ -123,6 +162,47 @@ h1 {
 }
 
 .sheets-status.info {
+    background: linear-gradient(135deg, #d1ecf1 0%, #bee5eb 100%);
+    color: #0c5460;
+    border: 1px solid #bee5eb;
+}
+
+/* JSONBin Status */
+.jsonbin-status {
+    margin-left: 10px;
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 500;
+    border: none;
+    transition: all 0.3s ease;
+}
+
+.jsonbin-status.loading {
+    background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);
+    color: #856404;
+    animation: pulse 1.5s infinite;
+}
+
+.jsonbin-status.success {
+    background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
+    color: #155724;
+    border: 1px solid #c3e6cb;
+}
+
+.jsonbin-status.error {
+    background: linear-gradient(135deg, #f8d7da 0%, #f5c6cb 100%);
+    color: #721c24;
+    border: 1px solid #f5c6cb;
+}
+
+.jsonbin-status.warning {
+    background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);
+    color: #856404;
+    border: 1px solid #ffeaa7;
+}
+
+.jsonbin-status.info {
     background: linear-gradient(135deg, #d1ecf1 0%, #bee5eb 100%);
     color: #0c5460;
     border: 1px solid #bee5eb;
@@ -814,25 +894,40 @@ h3 {
     }
 }
 
-/* Mobile responsive for sheets sync section */
+/* Mobile responsive for cloud sync section */
 @media (max-width: 768px) {
     .sheets-sync-section {
         flex-direction: column;
-        gap: 12px;
+        gap: 20px;
         align-items: center;
+    }
+    
+    .sync-group {
+        width: 100%;
+        max-width: 300px;
     }
 }
 
 @media (max-width: 480px) {
     .sheets-sync-section {
         flex-direction: column;
-        gap: 8px;
+        gap: 15px;
         width: 100%;
+        padding: 20px 15px;
+    }
+    
+    .sync-group {
+        width: 100%;
+        max-width: 280px;
+    }
+    
+    .sync-group h4 {
+        font-size: 12px;
     }
     
     .sync-btn {
         width: 100%;
-        max-width: 200px;
+        max-width: 250px;
         padding: 10px 16px;
         font-size: 11px;
     }

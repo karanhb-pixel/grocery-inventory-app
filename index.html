@@ -10,14 +10,17 @@
     <div class="container">
         <h1>🛒 Inventory Management System</h1>
         
-        <!-- Google Sheets Sync Section -->
+        <!-- Cloud Storage Sync Section -->
         <div id="sheets-sync-section" class="sheets-sync-section">
-            <button id="sync-to-sheets" class="sync-btn sync-to-sheets" onclick="syncToGoogleSheets()">
-                📤 Sync to Google Sheets
-            </button>
-            <button id="load-from-sheets" class="sync-btn load-from-sheets" onclick="loadFromGoogleSheets()">
-                📥 Load from Google Sheets
-            </button>
+            <div class="sync-group">
+                <h4>JSONBin.io Cloud Sync</h4>
+                <button id="sync-to-jsonbin" class="sync-btn sync-to-jsonbin" onclick="syncToJSONBin()">
+                    📤 Sync to JSONBin
+                </button>
+                <button id="load-from-jsonbin" class="sync-btn load-from-jsonbin" onclick="loadFromJSONBin()">
+                    📥 Load from JSONBin
+                </button>
+            </div>
         </div>
         
         <div id="input-panel">
