@@ -9,6 +9,8 @@
 let inventoryData = [];
 let currentSort = 'name'; // 'name' or 'category'
 let nextId = 1;
+let currentSearchTerm = ''; // Track current search term
+let searchTimeout; // For debouncing search
 
 // localStorage key
 const STORAGE_KEY = 'grocery_inventory_data';
@@ -17,6 +19,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     // 1. Set up event listeners
     document.getElementById('item-form').addEventListener('submit', handleAddItem);
     document.getElementById('toggle-sort').addEventListener('click', handleSortToggle);
+    
+    // Set up search event listeners
+    document.getElementById('search-input').addEventListener('input', handleSearchInput);
+    document.getElementById('clear-search').addEventListener('click', clearSearch);
     
     // 2. Initialize JSONBin cloud storage
     await initializeJSONBin();
@@ -111,10 +117,73 @@ function sortData(data) {
     });
 }
 
+// ==============================================================================
+// 3.1. Search and Filtering Functions
+// ==============================================================================
+
+/**
+ * Handle search input with debouncing
+ */
+function handleSearchInput(event) {
+    const searchTerm = event.target.value.trim();
+    
+    // Clear previous timeout
+    clearTimeout(searchTimeout);
+    
+    // Debounce search to avoid excessive filtering
+    searchTimeout = setTimeout(() => {
+        currentSearchTerm = searchTerm;
+        renderTable();
+        updateSearchUI();
+    }, 300);
+}
+
+/**
+ * Filter inventory data based on search term
+ */
+function filterInventoryData(data) {
+    if (!currentSearchTerm) {
+        return data;
+    }
+    
+    const searchLower = currentSearchTerm.toLowerCase();
+    return data.filter(item => 
+        item.name.toLowerCase().includes(searchLower) ||
+        item.category.toLowerCase().includes(searchLower)
+    );
+}
+
+/**
+ * Clear search and reset to show all items
+ */
+function clearSearch() {
+    document.getElementById('search-input').value = '';
+    currentSearchTerm = '';
+    renderTable();
+    updateSearchUI();
+}
+
+/**
+ * Update search UI elements (clear button visibility, etc.)
+ */
+function updateSearchUI() {
+    const clearButton = document.getElementById('clear-search');
+    const searchInput = document.getElementById('search-input');
+    
+    if (currentSearchTerm) {
+        clearButton.style.display = 'inline-block';
+    } else {
+        clearButton.style.display = 'none';
+    }
+}
+
 function renderTable() {
     const tableBody = document.querySelector('#inventory-table tbody');
     const cardsContainer = document.getElementById('inventory-cards');
-    const sortedData = sortData(inventoryData);
+    
+    // Filter data based on search term, then sort
+    const filteredData = filterInventoryData(inventoryData);
+    const sortedData = sortData(filteredData);
     
     // Clear both views
     tableBody.innerHTML = '';
@@ -174,17 +243,59 @@ function renderTable() {
         rowCount++;
     });
 
-    document.getElementById('item-count').textContent = rowCount;
+    // Update item count display
+    const countElement = document.getElementById('item-count');
+    if (currentSearchTerm) {
+        countElement.textContent = `${rowCount} of ${inventoryData.length}`;
+        countElement.title = `Showing ${rowCount} of ${inventoryData.total} total items`;
+    } else {
+        countElement.textContent = rowCount;
+        countElement.title = '';
+    }
     
     // Show empty state if no items
-    if (rowCount === 0 && cardsContainer) {
-        cardsContainer.innerHTML = `
-            <div class="empty-state">
-                <div class="empty-icon">📦</div>
-                <h3>No items yet</h3>
-                <p>Add your first inventory item above!</p>
-            </div>
-        `;
+    if (rowCount === 0) {
+        if (currentSearchTerm) {
+            // No results found for search
+            if (cardsContainer) {
+                cardsContainer.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-icon">🔍</div>
+                        <h3>No items found</h3>
+                        <p>No items match "${currentSearchTerm}"</p>
+                        <button onclick="clearSearch()" class="clear-search-empty">Clear search</button>
+                    </div>
+                `;
+            }
+            
+            // Also show message in table view
+            const tableBody = document.querySelector('#inventory-table tbody');
+            if (tableBody) {
+                tableBody.innerHTML = `
+                    <tr>
+                        <td colspan="5" class="no-results-cell">
+                            <div class="no-results-message">
+                                <div class="no-results-icon">🔍</div>
+                                <h3>No items found</h3>
+                                <p>No items match "${currentSearchTerm}"</p>
+                                <button onclick="clearSearch()" class="clear-search-empty-btn">Clear search</button>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            }
+        } else {
+            // No items in inventory at all
+            if (cardsContainer) {
+                cardsContainer.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-icon">📦</div>
+                        <h3>No items yet</h3>
+                        <p>Add your first inventory item above!</p>
+                    </div>
+                `;
+            }
+        }
     }
 }
 
