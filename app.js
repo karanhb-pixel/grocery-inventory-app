@@ -113,12 +113,17 @@ function sortData(data) {
 
 function renderTable() {
     const tableBody = document.querySelector('#inventory-table tbody');
-    tableBody.innerHTML = '';
+    const cardsContainer = document.getElementById('inventory-cards');
     const sortedData = sortData(inventoryData);
+    
+    // Clear both views
+    tableBody.innerHTML = '';
+    if (cardsContainer) cardsContainer.innerHTML = '';
     
     let rowCount = 0;
     
     sortedData.forEach(item => {
+        // Render table row (for desktop)
         const row = tableBody.insertRow();
         row.dataset.itemId = item.id;
         
@@ -137,10 +142,123 @@ function renderTable() {
             <button class="action-btn edit-btn" onclick="handleEdit(this)">Edit</button>
             <button class="action-btn remove-btn" onclick="handleRemove(this)">Remove</button>
         `;
+        
+        // Render card (for mobile)
+        if (cardsContainer) {
+            const card = document.createElement('div');
+            card.className = 'inventory-card';
+            card.dataset.itemId = item.id;
+            card.innerHTML = `
+                <div class="card-header">
+                    <h3 class="card-title">${item.name}</h3>
+                    <span class="card-category">${item.category}</span>
+                </div>
+                <div class="card-body">
+                    <div class="card-row">
+                        <span class="card-label">Selling Price</span>
+                        <span class="card-value price">₹${item.price.toFixed(2)}</span>
+                    </div>
+                    <div class="card-row">
+                        <span class="card-label">Purchase Price</span>
+                        <span class="card-value">₹${item.purchasePrice.toFixed(2)}</span>
+                    </div>
+                </div>
+                <div class="card-actions">
+                    <button class="action-btn edit-btn" onclick="handleEditCard(this)">✏️ Edit</button>
+                    <button class="action-btn remove-btn" onclick="handleRemoveCard(this)">🗑️ Remove</button>
+                </div>
+            `;
+            cardsContainer.appendChild(card);
+        }
+        
         rowCount++;
     });
 
     document.getElementById('item-count').textContent = rowCount;
+    
+    // Show empty state if no items
+    if (rowCount === 0 && cardsContainer) {
+        cardsContainer.innerHTML = `
+            <div class="empty-state">
+                <div class="empty-icon">📦</div>
+                <h3>No items yet</h3>
+                <p>Add your first inventory item above!</p>
+            </div>
+        `;
+    }
+}
+
+// Card-specific handlers for mobile
+function handleEditCard(button) {
+    const card = button.closest('.inventory-card');
+    const itemId = card.dataset.itemId;
+    const item = inventoryData.find(i => i.id == itemId);
+    
+    if (card.classList.contains('editing')) {
+        // Save changes
+        const inputs = card.querySelectorAll('input, select');
+        const updatedItem = {
+            id: parseInt(itemId),
+            name: card.querySelector('[data-field="name"]').value.trim(),
+            price: parseFloat(card.querySelector('[data-field="price"]').value),
+            purchasePrice: parseFloat(card.querySelector('[data-field="purchasePrice"]').value),
+            category: card.querySelector('[data-field="category"]').value,
+            status: item.status
+        };
+        
+        if (!updatedItem.name || isNaN(updatedItem.price) || isNaN(updatedItem.purchasePrice)) {
+            alert("Please fill all fields correctly.");
+            return;
+        }
+        
+        const itemIndex = inventoryData.findIndex(i => i.id == itemId);
+        inventoryData[itemIndex] = updatedItem;
+        saveDataToStorage();
+        renderTable();
+        autoSyncToJSONBin();
+    } else {
+        // Start editing
+        card.classList.add('editing');
+        const selectOptions = document.getElementById('category').innerHTML;
+        
+        card.innerHTML = `
+            <div class="card-header">
+                <input type="text" class="card-input" data-field="name" value="${item.name}" placeholder="Item Name">
+            </div>
+            <div class="card-body">
+                <div class="card-row">
+                    <span class="card-label">Selling Price</span>
+                    <input type="number" class="card-input" data-field="price" value="${item.price}" step="0.01">
+                </div>
+                <div class="card-row">
+                    <span class="card-label">Purchase Price</span>
+                    <input type="number" class="card-input" data-field="purchasePrice" value="${item.purchasePrice}" step="0.01">
+                </div>
+                <div class="card-row">
+                    <span class="card-label">Category</span>
+                    <select class="card-input" data-field="category">${selectOptions}</select>
+                </div>
+            </div>
+            <div class="card-actions">
+                <button class="action-btn save-btn" onclick="handleEditCard(this)">💾 Save</button>
+                <button class="action-btn cancel-btn" onclick="renderTable()">❌ Cancel</button>
+            </div>
+        `;
+        card.querySelector('[data-field="category"]').value = item.category;
+    }
+}
+
+function handleRemoveCard(button) {
+    if (!confirm("Are you sure you want to remove this item?")) return;
+    
+    const card = button.closest('.inventory-card');
+    const itemId = card.dataset.itemId;
+    const itemIndex = inventoryData.findIndex(i => i.id == itemId);
+    
+    inventoryData.splice(itemIndex, 1);
+    saveDataToStorage();
+    renderTable();
+    autoSyncToJSONBin();
 }
 
 // ==============================================================================
