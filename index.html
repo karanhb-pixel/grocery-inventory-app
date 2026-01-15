@@ -27,7 +27,12 @@
         </div>
         
         <div id="input-panel">
-            <h2>Add New Item</h2>
+            <div class="input-header">
+                <h2>Add New Item</h2>
+                <button id="show-bills-main" class="bills-btn main-bills-btn" onclick="showBillsView()">
+                    📄 View Bills
+                </button>
+            </div>
             <form id="item-form">
                 <input type="text" id="itemName" placeholder="Item Name" required>
                 <input type="number" id="sellingPrice" placeholder="Selling Price" required step="0.01">
@@ -61,6 +66,7 @@
                     <button id="clear-search" class="clear-search-btn" style="display: none;">✕</button>
                 </div>
                 <button id="toggle-sort">Sort by: Name (A-Z)</button>
+                <button id="show-bills" class="bills-btn" onclick="showBillsView()">📄 View Bills</button>
                 
                 <!-- Desktop Data Management -->
                 <div class="data-management desktop-only">
@@ -110,6 +116,65 @@
             
             <!-- Mobile Card View -->
             <div id="inventory-cards" class="inventory-cards mobile-only"></div>
+        </div>
+        
+        <!-- Bills View Section -->
+        <div id="bills-panel" class="bills-panel" style="display: none;">
+            <h2>📄 Bills Management</h2>
+            <div class="bills-controls">
+                <button id="back-to-inventory" class="back-btn" onclick="showInventoryView()">← Back to Inventory</button>
+                <button id="add-new-bill" class="add-bill-btn" onclick="addNewBill()">➕ Add New Bill</button>
+            </div>
+            
+            <!-- Bills Form -->
+            <div id="bill-form-container" class="bill-form-container" style="display: none;">
+                <form id="bill-form" class="bill-form">
+                    <div class="form-row">
+                        <label for="bill-date">Date:</label>
+                        <input type="date" id="bill-date" required>
+                    </div>
+                    <div class="form-row">
+                        <label for="bill-item">Item:</label>
+                        <select id="bill-item" required>
+                            <option value="" disabled selected>Select an item</option>
+                            <!-- Items will be populated from inventory -->
+                        </select>
+                    </div>
+                    <div class="form-row">
+                        <label for="bill-quantity">Quantity:</label>
+                        <input type="number" id="bill-quantity" placeholder="Quantity" required min="1" value="1">
+                    </div>
+                    <div class="form-row">
+                        <label for="bill-purchase-price">Purchase Price:</label>
+                        <input type="number" id="bill-purchase-price" placeholder="Purchase Price" required step="0.01">
+                    </div>
+                    <div class="form-row">
+                        <label>Previous Purchase Price:</label>
+                        <span id="previous-purchase-price">₹0.00</span>
+                    </div>
+                    <button type="submit" class="submit-bill-btn">Add to Bill</button>
+                    <button type="button" class="cancel-bill-btn" onclick="cancelBill()">Cancel</button>
+                </form>
+            </div>
+            
+            <!-- Bills List -->
+            <div id="bills-list" class="bills-list">
+                <table id="bills-table">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Item</th>
+                            <th>Quantity</th>
+                            <th>Purchase Price</th>
+                            <th>Previous Price</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="bills-table-body">
+                        <!-- Bills will be displayed here -->
+                    </tbody>
+                </table>
+            </div>
         </div>
     </div>
 

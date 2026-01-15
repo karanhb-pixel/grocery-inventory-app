@@ -12,8 +12,13 @@ let nextId = 1;
 let currentSearchTerm = ''; // Track current search term
 let searchTimeout; // For debouncing search
 
-// localStorage key
+// localStorage keys
 const STORAGE_KEY = 'grocery_inventory_data';
+const BILLS_STORAGE_KEY = 'grocery_bills_data';
+
+// Bills data
+let billsData = [];
+let nextBillId = 1;
 
 document.addEventListener('DOMContentLoaded', async () => {
     // 1. Set up event listeners
@@ -24,11 +29,21 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('search-input').addEventListener('input', handleSearchInput);
     document.getElementById('clear-search').addEventListener('click', clearSearch);
     
+    // Set up bills event listeners
+    document.getElementById('show-bills').addEventListener('click', showBillsView);
+    document.getElementById('back-to-inventory').addEventListener('click', showInventoryView);
+    document.getElementById('add-new-bill').addEventListener('click', addNewBill);
+    document.getElementById('bill-form').addEventListener('submit', handleAddBill);
+    
+    // Set up main bills button
+    document.getElementById('show-bills-main').addEventListener('click', showBillsView);
+    
     // 2. Initialize JSONBin cloud storage
     await initializeJSONBin();
     
     // 3. Load data from localStorage
     loadDataFromStorage();
+    loadBillsFromStorage();
     
     // 4. Render the table
     renderTable();
@@ -60,6 +75,44 @@ function loadDataFromStorage() {
         console.error('Error loading data from localStorage:', error);
         inventoryData = [];
         nextId = 1;
+    }
+}
+
+/**
+ * Load bills data from localStorage
+ */
+function loadBillsFromStorage() {
+    try {
+        const storedBills = localStorage.getItem(BILLS_STORAGE_KEY);
+        if (storedBills) {
+            billsData = JSON.parse(storedBills);
+            // Find the next available bill ID
+            if (billsData.length > 0) {
+                nextBillId = Math.max(...billsData.map(bill => parseInt(bill.id))) + 1;
+            }
+            console.log(`Bills loaded from localStorage. Total bills: ${billsData.length}`);
+        } else {
+            console.log('No bills found in localStorage. Starting with empty bills.');
+            billsData = [];
+            nextBillId = 1;
+        }
+    } catch (error) {
+        console.error('Error loading bills from localStorage:', error);
+        billsData = [];
+        nextBillId = 1;
+    }
+}
+
+/**
+ * Save bills data to localStorage
+ */
+function saveBillsToStorage() {
+    try {
+        localStorage.setItem(BILLS_STORAGE_KEY, JSON.stringify(billsData));
+        console.log('Bills saved to localStorage successfully.');
+    } catch (error) {
+        console.error('Error saving bills to localStorage:', error);
+        alert('Failed to save bills data. Please check if localStorage is available.');
     }
 }
 
@@ -722,6 +775,18 @@ const JSONBIN_CONFIG = {
     baseUrl: 'https://api.jsonbin.io/v3/b'
 };
 
+// Bills JSONBin configuration (separate bin for bills)
+const BILLS_JSONBIN_CONFIG = {
+    // Your JSONBin API key for bills (can be same as above)
+    apiKey: '$2a$10$hTYGSMnNHzJkNG0id/yRfeJsv2ngrcFYEKfuP7jsJKMmJwh2cvkMW',
+    
+    // Separate bin ID for bills data
+    binId: '69344fedae596e708f87a734', // Different bin ID for bills
+    
+    // JSONBin API base URL
+    baseUrl: 'https://api.jsonbin.io/v3/b'
+};
+
 /**
  * Initialize JSONBin connection
  */
@@ -730,7 +795,7 @@ async function initializeJSONBin() {
         console.log('Initializing JSONBin connection...');
         
         // Check if configuration is set
-        if (JSONBIN_CONFIG.apiKey === 'YOUR_JSONBIN_API_KEY_HERE' || 
+        if (JSONBIN_CONFIG.apiKey === 'YOUR_JSONBIN_API_KEY_HERE' ||
             JSONBIN_CONFIG.binId === 'YOUR_JSONBIN_BIN_ID_HERE') {
             console.warn('JSONBin not configured. Using demo mode.');
             showJSONBinStatus('Demo mode - configure JSONBin to enable sync', 'warning');
@@ -757,6 +822,45 @@ async function initializeJSONBin() {
     } catch (error) {
         console.error('❌ JSONBin connection failed:', error);
         showJSONBinStatus('JSONBin connection failed', 'error');
+        return false;
+    }
+}
+
+/**
+ * Initialize Bills JSONBin connection
+ */
+async function initializeBillsJSONBin() {
+    try {
+        console.log('Initializing Bills JSONBin connection...');
+        
+        // Check if configuration is set
+        if (BILLS_JSONBIN_CONFIG.apiKey === 'YOUR_JSONBIN_API_KEY_HERE' ||
+            BILLS_JSONBIN_CONFIG.binId === 'YOUR_JSONBIN_BIN_ID_HERE') {
+            console.warn('Bills JSONBin not configured. Using demo mode.');
+            showJSONBinStatus('Demo mode - configure Bills JSONBin to enable sync', 'warning');
+            return false;
+        }
+        
+        // Test connection by reading existing data
+        const response = await fetch(`${BILLS_JSONBIN_CONFIG.baseUrl}/${BILLS_JSONBIN_CONFIG.binId}/latest`, {
+            headers: {
+                'X-Master-Key': BILLS_JSONBIN_CONFIG.apiKey
+            }
+        });
+        
+        if (response.ok) {
+            console.log('✅ Bills JSONBin connection successful');
+            showJSONBinStatus('Connected to Bills JSONBin', 'success');
+            return true;
+        } else if (response.status === 404) {
+            throw new Error('Bills bin not found. Make sure your bin ID is correct and the bin exists.');
+        } else {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        
+    } catch (error) {
+        console.error('❌ Bills JSONBin connection failed:', error);
+        showJSONBinStatus('Bills JSONBin connection failed', 'error');
         return false;
     }
 }
@@ -900,6 +1004,120 @@ function autoSyncToJSONBin() {
     }, 3000); // Wait 3 seconds after last change
 }
 
+/**
+ * Auto-sync bills to JSONBin when data changes
+ */
+function autoSyncBillsToJSONBin() {
+    // Debounce sync to avoid too frequent API calls
+    clearTimeout(window.billsJsonbinSyncTimeout);
+    window.billsJsonbinSyncTimeout = setTimeout(() => {
+        syncBillsToJSONBin();
+    }, 3000); // Wait 3 seconds after last change
+}
+
+/**
+ * Sync bills data to JSONBin
+ */
+async function syncBillsToJSONBin() {
+    if (billsData.length === 0) {
+        console.log('No bills data to sync');
+        showJSONBinStatus('No bills data to sync', 'info');
+        return;
+    }
+    
+    try {
+        showJSONBinStatus('Syncing bills to JSONBin...', 'loading');
+        
+        const response = await fetch(`${BILLS_JSONBIN_CONFIG.baseUrl}/${BILLS_JSONBIN_CONFIG.binId}`, {
+            method: 'PUT',
+            headers: {
+                'X-Master-Key': BILLS_JSONBIN_CONFIG.apiKey,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(billsData)
+        });
+        
+        if (response.ok) {
+            const result = await response.json();
+            console.log('✅ Bills data synced to JSONBin successfully');
+            showJSONBinStatus(`Synced ${billsData.length} bills to JSONBin`, 'success');
+            
+            // Auto-hide success message after 3 seconds
+            setTimeout(() => {
+                hideJSONBinStatus();
+            }, 3000);
+        } else {
+            throw new Error(`Sync failed: ${response.status} ${response.statusText}`);
+        }
+        
+    } catch (error) {
+        console.error('❌ Sync bills to JSONBin failed:', error);
+        showJSONBinStatus('Bills sync failed: ' + error.message, 'error');
+    }
+}
+
+/**
+ * Load bills data from JSONBin to localStorage
+ */
+async function loadBillsFromJSONBin() {
+    try {
+        showJSONBinStatus('Loading bills from JSONBin...', 'loading');
+        
+        const response = await fetch(`${BILLS_JSONBIN_CONFIG.baseUrl}/${BILLS_JSONBIN_CONFIG.binId}/latest`, {
+            headers: {
+                'X-Master-Key': BILLS_JSONBIN_CONFIG.apiKey
+            }
+        });
+        
+        if (response.ok) {
+            const data = await response.json();
+            const jsonData = data.record || data; // JSONBin returns {record: [...]}
+            
+            if (Array.isArray(jsonData) && jsonData.length > 0) {
+                // Convert data back to bills objects
+                billsData = jsonData.map(bill => ({
+                    id: parseInt(bill.id) || 0,
+                    date: bill.date || '',
+                    itemId: parseInt(bill.itemId) || 0,
+                    itemName: bill.itemName || '',
+                    category: bill.category || '',
+                    quantity: parseInt(bill.quantity) || 1,
+                    purchasePrice: parseFloat(bill.purchasePrice) || 0,
+                    previousPurchasePrice: parseFloat(bill.previousPurchasePrice) || 0,
+                    timestamp: bill.timestamp || ''
+                })).filter(bill => bill.itemName && bill.date); // Filter out invalid bills
+                
+                // Update nextBillId
+                if (billsData.length > 0) {
+                    nextBillId = Math.max(...billsData.map(bill => parseInt(bill.id))) + 1;
+                } else {
+                    nextBillId = 1;
+                }
+                
+                // Save to localStorage and update UI
+                saveBillsToStorage();
+                renderBillsTable();
+                
+                console.log(`✅ Loaded ${billsData.length} bills from JSONBin`);
+                showJSONBinStatus(`Loaded ${billsData.length} bills from JSONBin`, 'success');
+                
+                setTimeout(() => {
+                    hideJSONBinStatus();
+                }, 3000);
+            } else {
+                console.log('No bills data found in JSONBin');
+                showJSONBinStatus('No bills data found in JSONBin', 'info');
+            }
+        } else {
+            throw new Error(`Load failed: ${response.status} ${response.statusText}`);
+        }
+        
+    } catch (error) {
+        console.error('❌ Load bills from JSONBin failed:', error);
+        showJSONBinStatus('Bills load failed: ' + error.message, 'error');
+    }
+}
+
 // ==============================================================================
 // 8. Mobile Modal Functions
 // ==============================================================================
@@ -936,3 +1154,239 @@ document.addEventListener('keydown', function(event) {
         }
     }
 });
+
+// ==============================================================================
+// 9. Bills Management Functions
+// ==============================================================================
+
+/**
+ * Show bills view
+ */
+function showBillsView() {
+    document.getElementById('inventory-panel').style.display = 'none';
+    document.getElementById('bills-panel').style.display = 'block';
+    populateBillItems();
+    renderBillsTable();
+    
+    // Initialize bills JSONBin connection
+    initializeBillsJSONBin();
+    
+    // Add bills sync buttons to UI
+    addBillsSyncButtons();
+}
+
+/**
+ * Add bills sync buttons to the bills view
+ */
+function addBillsSyncButtons() {
+    const billsSyncSection = document.getElementById('sheets-sync-section');
+    
+    // Check if bills sync buttons already exist
+    if (document.getElementById('bills-sync-group')) {
+        return;
+    }
+    
+    const billsSyncGroup = document.createElement('div');
+    billsSyncGroup.id = 'bills-sync-group';
+    billsSyncGroup.className = 'sync-group';
+    billsSyncGroup.innerHTML = `
+        <h4>Bills JSONBin Sync</h4>
+        <button id="sync-bills-to-jsonbin" class="sync-btn sync-to-jsonbin" onclick="syncBillsToJSONBin()">
+            📤 Sync Bills to JSONBin
+        </button>
+        <button id="load-bills-from-jsonbin" class="sync-btn load-from-jsonbin" onclick="loadBillsFromJSONBin()">
+            📥 Load Bills from JSONBin
+        </button>
+    `;
+    
+    billsSyncSection.appendChild(billsSyncGroup);
+}
+
+/**
+ * Show inventory view
+ */
+function showInventoryView() {
+    document.getElementById('bills-panel').style.display = 'none';
+    document.getElementById('inventory-panel').style.display = 'block';
+    cancelBill();
+}
+
+/**
+ * Show bill form
+ */
+function addNewBill() {
+    document.getElementById('bill-form-container').style.display = 'block';
+    document.getElementById('bill-date').value = new Date().toISOString().split('T')[0];
+    document.getElementById('bill-quantity').value = '1';
+    document.getElementById('bill-purchase-price').value = '';
+    document.getElementById('previous-purchase-price').textContent = '₹0.00';
+    populateBillItems();
+}
+
+/**
+ * Cancel bill creation
+ */
+function cancelBill() {
+    document.getElementById('bill-form-container').style.display = 'none';
+    document.getElementById('bill-form').reset();
+}
+
+/**
+ * Populate bill items dropdown from inventory
+ */
+function populateBillItems() {
+    const billItemSelect = document.getElementById('bill-item');
+    billItemSelect.innerHTML = '<option value="" disabled selected>Select an item</option>';
+    
+    inventoryData.forEach(item => {
+        const option = document.createElement('option');
+        option.value = item.id;
+        option.textContent = `${item.name} (${item.category})`;
+        option.dataset.price = item.purchasePrice;
+        billItemSelect.appendChild(option);
+    });
+}
+
+/**
+ * Update previous purchase price when item is selected
+ */
+document.getElementById('bill-item').addEventListener('change', function() {
+    const selectedOption = this.options[this.selectedIndex];
+    if (selectedOption && selectedOption.dataset.price) {
+        const previousPrice = parseFloat(selectedOption.dataset.price);
+        document.getElementById('previous-purchase-price').textContent = `₹${previousPrice.toFixed(2)}`;
+        document.getElementById('bill-purchase-price').value = previousPrice.toFixed(2);
+    } else {
+        document.getElementById('previous-purchase-price').textContent = '₹0.00';
+        document.getElementById('bill-purchase-price').value = '';
+    }
+});
+
+/**
+ * Handle bill form submission
+ */
+function handleAddBill(event) {
+    event.preventDefault();
+    
+    const date = document.getElementById('bill-date').value;
+    const itemId = document.getElementById('bill-item').value;
+    const quantity = parseInt(document.getElementById('bill-quantity').value);
+    const purchasePrice = parseFloat(document.getElementById('bill-purchase-price').value);
+    
+    if (!date || !itemId || isNaN(quantity) || quantity <= 0 || isNaN(purchasePrice) || purchasePrice <= 0) {
+        alert('Please fill all fields correctly.');
+        return;
+    }
+    
+    const selectedItem = inventoryData.find(item => item.id == itemId);
+    if (!selectedItem) {
+        alert('Selected item not found in inventory.');
+        return;
+    }
+    
+    const newBill = {
+        id: nextBillId++,
+        date: date,
+        itemId: parseInt(itemId),
+        itemName: selectedItem.name,
+        category: selectedItem.category,
+        quantity: quantity,
+        purchasePrice: purchasePrice,
+        previousPurchasePrice: selectedItem.purchasePrice,
+        timestamp: new Date().toISOString()
+    };
+    
+    // Add to bills data
+    billsData.push(newBill);
+    saveBillsToStorage();
+    
+    // Update the item's purchase price in inventory
+    selectedItem.purchasePrice = purchasePrice;
+    saveDataToStorage();
+    
+    console.log(`Bill added successfully (ID: ${newBill.id}).`);
+    
+    // Auto-sync bills to JSONBin
+    autoSyncBillsToJSONBin();
+    
+    // Reset form and render bills
+    cancelBill();
+    renderBillsTable();
+    renderTable(); // Refresh inventory table to show updated purchase price
+}
+
+/**
+ * Render bills table
+ */
+function renderBillsTable() {
+    const tableBody = document.getElementById('bills-table-body');
+    tableBody.innerHTML = '';
+    
+    // Sort bills by date (newest first)
+    const sortedBills = [...billsData].sort((a, b) => new Date(b.date) - new Date(a.date));
+    
+    sortedBills.forEach(bill => {
+        const row = tableBody.insertRow();
+        row.dataset.billId = bill.id;
+        
+        // Format date
+        const formattedDate = new Date(bill.date).toLocaleDateString('en-IN', {
+            day: '2-digit',
+            month: 'short',
+            year: 'numeric'
+        });
+        
+        row.insertCell().textContent = formattedDate;
+        row.insertCell().textContent = bill.itemName;
+        row.insertCell().textContent = bill.quantity;
+        row.insertCell().textContent = `₹${bill.purchasePrice.toFixed(2)}`;
+        row.insertCell().textContent = `₹${bill.previousPurchasePrice.toFixed(2)}`;
+        
+        // Actions cell
+        const actionsCell = row.insertCell();
+        actionsCell.innerHTML = `
+            <button class="bill-action-btn bill-delete-btn" onclick="deleteBill(${bill.id})">Delete</button>
+        `;
+    });
+    
+    // Show empty state if no bills
+    if (billsData.length === 0) {
+        tableBody.innerHTML = `
+            <tr>
+                <td colspan="6" class="no-results-cell">
+                    <div class="no-results-message">
+                        <div class="no-results-icon">📄</div>
+                        <h3>No bills yet</h3>
+                        <p>Add your first bill using the button above!</p>
+                    </div>
+                </td>
+            </tr>
+        `;
+    }
+}
+
+/**
+ * Delete a bill
+ */
+function deleteBill(billId) {
+    if (!confirm('Are you sure you want to delete this bill?')) {
+        return;
+    }
+    
+    const billIndex = billsData.findIndex(bill => bill.id === billId);
+    if (billIndex === -1) {
+        console.error('Bill not found:', billId);
+        return;
+    }
+    
+    // Remove from bills data
+    billsData.splice(billIndex, 1);
+    saveBillsToStorage();
+    
+    console.log(`Bill ID ${billId} deleted successfully.`);
+    
+    // Auto-sync bills to JSONBin after deletion
+    autoSyncBillsToJSONBin();
+    
+    renderBillsTable();
+}
