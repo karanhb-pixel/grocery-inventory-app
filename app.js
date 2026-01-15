@@ -766,25 +766,25 @@ function importFromCSV(event) {
  */
 const JSONBIN_CONFIG = {
     // Your JSONBin API key (X-Master-Key from https://jsonbin.io)
-    apiKey: '$2a$10$hTYGSMnNHzJkNG0id/yRfeJsv2ngrcFYEKfuP7jsJKMmJwh2cvkMW',
+    apiKey: process.env.JSONBIN_API_KEY || '$2a$10$hTYGSMnNHzJkNG0id/yRfeJsv2ngrcFYEKfuP7jsJKMmJwh2cvkMW',
     
     // Your JSONBin bin ID (from the URL when you create a bin)
-    binId: '69344fedae596e708f87a733',
+    binId: process.env.JSONBIN_BIN_ID || '69344fedae596e708f87a733',
     
     // JSONBin API base URL (DO NOT include bin ID here)
-    baseUrl: 'https://api.jsonbin.io/v3/b'
+    baseUrl: process.env.JSONBIN_BASE_URL || 'https://api.jsonbin.io/v3/b'
 };
 
 // Bills JSONBin configuration (separate bin for bills)
 const BILLS_JSONBIN_CONFIG = {
     // Your JSONBin API key for bills (can be same as above)
-    apiKey: '$2a$10$hTYGSMnNHzJkNG0id/yRfeJsv2ngrcFYEKfuP7jsJKMmJwh2cvkMW',
+    apiKey: process.env.BILLS_JSONBIN_API_KEY || '$2a$10$hTYGSMnNHzJkNG0id/yRfeJsv2ngrcFYEKfuP7jsJKMmJwh2cvkMW',
     
     // Separate bin ID for bills data
-    binId: '69344fedae596e708f87a734', // Different bin ID for bills
+    binId: process.env.BILLS_JSONBIN_BIN_ID || '69688172ae596e708fdd87be', // Different bin ID for bills
     
     // JSONBin API base URL
-    baseUrl: 'https://api.jsonbin.io/v3/b'
+    baseUrl: process.env.BILLS_JSONBIN_BASE_URL || 'https://api.jsonbin.io/v3/b'
 };
 
 /**
