@@ -20,11 +20,7 @@ const BILLS_STORAGE_KEY = 'grocery_bills_data';
 let billsData = [];
 let nextBillId = 1;
 
-// Load environment variables
-if (typeof process === 'undefined') {
-    const dotenv = require('dotenv');
-    dotenv.config();
-}
+
 
 document.addEventListener('DOMContentLoaded', async () => {
     // 1. Set up event listeners
