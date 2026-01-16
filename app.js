@@ -232,41 +232,61 @@ function updateSearchUI() {
     }
 }
 
+/**
+ * Renders the inventory table using DocumentFragment for
+ * optimal performance and minimal layout shifts.
+ */
+function renderInventoryTable(items) {
+    const tableBody = document.querySelector('#inventory-table tbody');
+
+    // 1. Clear the current view
+    tableBody.innerHTML = '';
+
+    // 2. Create the fragment "container"
+    const fragment = document.createDocumentFragment();
+
+    // 3. Loop and build
+    items.forEach(item => {
+        const tr = document.createElement('tr');
+        tr.className = 'inventory-row';
+        tr.dataset.itemId = item.id;
+
+        tr.innerHTML = `
+            <td>${item.name}</td>
+            <td>₹${item.price.toFixed(2)}</td>
+            <td>₹${item.purchasePrice.toFixed(2)}</td>
+            <td>${item.category}</td>
+            <td>
+                <button class="action-btn edit-btn" onclick="handleEdit(this)">Edit</button>
+                <button class="action-btn remove-btn" onclick="handleRemove(this)">Remove</button>
+            </td>
+        `;
+
+        // Append to fragment (no browser reflow triggered here)
+        fragment.appendChild(tr);
+    });
+
+    // 4. Final Injection (Single reflow/paint)
+    tableBody.appendChild(fragment);
+}
+
 function renderTable() {
     const tableBody = document.querySelector('#inventory-table tbody');
     const cardsContainer = document.getElementById('inventory-cards');
-    
+
     // Filter data based on search term, then sort
     const filteredData = filterInventoryData(inventoryData);
     const sortedData = sortData(filteredData);
-    
+
     // Clear both views
-    tableBody.innerHTML = '';
     if (cardsContainer) cardsContainer.innerHTML = '';
-    
-    let rowCount = 0;
-    
+
+    // Render table rows using DocumentFragment
+    renderInventoryTable(sortedData);
+
+    let rowCount = sortedData.length;
+
     sortedData.forEach(item => {
-        // Render table row (for desktop)
-        const row = tableBody.insertRow();
-        row.dataset.itemId = item.id;
-        
-        // 1. Item Name
-        row.insertCell().textContent = item.name;
-        // 2. Selling Price
-        row.insertCell().textContent = `₹${item.price.toFixed(2)}`;
-        // 3. Purchase Price
-        row.insertCell().textContent = `₹${item.purchasePrice.toFixed(2)}`;
-        // 4. Category
-        row.insertCell().textContent = item.category;
-        
-        // 5. Actions (Edit/Remove buttons)
-        const actionsCell = row.insertCell();
-        actionsCell.innerHTML = `
-            <button class="action-btn edit-btn" onclick="handleEdit(this)">Edit</button>
-            <button class="action-btn remove-btn" onclick="handleRemove(this)">Remove</button>
-        `;
-        
         // Render card (for mobile)
         if (cardsContainer) {
             const card = document.createElement('div');
@@ -294,8 +314,6 @@ function renderTable() {
             `;
             cardsContainer.appendChild(card);
         }
-        
-        rowCount++;
     });
 
     // Update item count display
@@ -322,7 +340,7 @@ function renderTable() {
                     </div>
                 `;
             }
-            
+
             // Also show message in table view
             const tableBody = document.querySelector('#inventory-table tbody');
             if (tableBody) {
@@ -348,6 +366,22 @@ function renderTable() {
                         <h3>No items yet</h3>
                         <p>Add your first inventory item above!</p>
                     </div>
+                `;
+            }
+
+            // Also show message in table view
+            const tableBody = document.querySelector('#inventory-table tbody');
+            if (tableBody) {
+                tableBody.innerHTML = `
+                    <tr>
+                        <td colspan="5" class="no-results-cell">
+                            <div class="no-results-message">
+                                <div class="no-results-icon">📦</div>
+                                <h3>No items yet</h3>
+                                <p>Add your first inventory item above!</p>
+                            </div>
+                        </td>
+                    </tr>
                 `;
             }
         }

@@ -1,5 +1,28 @@
 {
+  "name": "grocery-inventory-app",
+  "version": "1.0.0",
+  "description": "This is the final source code for the single-page inventory management application integrated with Google Sheets.",
+  "main": "app.js",
   "dependencies": {
     "dotenv": "^17.2.3"
-  }
+  },
+  "devDependencies": {
+    "http-server": "^14.1.1"
+  },
+  "scripts": {
+    "start": "http-server -p 3000",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/karanhb-pixel/grocery-inventory-app.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/karanhb-pixel/grocery-inventory-app/issues"
+  },
+  "homepage": "https://github.com/karanhb-pixel/grocery-inventory-app#readme"
 }
