@@ -110,13 +110,12 @@ export async function initializeBillsJSONBin() {
 /**
  * Sync localStorage data to JSONBin
  */
-export async function syncToJSONBin() {
-    if (inventoryData.length === 0) {
-        console.log('No data to sync');
-        showJSONBinStatus('No data to sync', 'info');
-        return;
-    }
 
+
+/**
+ * Sync localStorage data to JSONBin
+ */
+export async function syncToJSONBin() {
     try {
         showJSONBinStatus('Syncing to JSONBin...', 'loading');
 
@@ -130,14 +129,9 @@ export async function syncToJSONBin() {
         });
 
         if (response.ok) {
-            const result = await response.json();
             console.log('✅ Data synced to JSONBin successfully');
-            showJSONBinStatus(`Synced ${inventoryData.length} items to JSONBin`, 'success');
-
-            // Auto-hide success message after 3 seconds
-            setTimeout(() => {
-                hideJSONBinStatus();
-            }, 3000);
+            showJSONBinStatus('Sync successful', 'success');
+            setTimeout(() => hideJSONBinStatus(), 3000);
         } else {
             throw new Error(`Sync failed: ${response.status} ${response.statusText}`);
         }
@@ -151,6 +145,9 @@ export async function syncToJSONBin() {
 /**
  * Load data from JSONBin to localStorage
  */
+import { renderTable } from './ui.js';
+import { inventoryData, saveDataToStorage, nextId } from './store.js';
+
 export async function loadFromJSONBin() {
     try {
         showJSONBinStatus('Loading from JSONBin...', 'loading');
@@ -166,15 +163,16 @@ export async function loadFromJSONBin() {
             const jsonData = data.record || data; // JSONBin returns {record: [...]}
 
             if (Array.isArray(jsonData) && jsonData.length > 0) {
-                // Convert data back to inventory objects
-                inventoryData = jsonData.map(item => ({
+                // Clear existing array and push new data to maintain reference
+                inventoryData.length = 0;
+                inventoryData.push(...jsonData.map(item => ({
                     id: parseInt(item.id) || 0,
                     name: item.name || '',
                     price: parseFloat(item.price) || 0,
                     purchasePrice: parseFloat(item.purchasePrice) || 0,
                     category: item.category || '',
                     status: item.status || 'Active'
-                })).filter(item => item.name && item.category); // Filter out invalid rows
+                })).filter(item => item.name && item.category));
 
                 // Update nextId
                 if (inventoryData.length > 0) {
@@ -183,16 +181,12 @@ export async function loadFromJSONBin() {
                     nextId = 1;
                 }
 
-                // Save to localStorage and update UI
                 saveDataToStorage();
                 renderTable();
 
                 console.log(`✅ Loaded ${inventoryData.length} items from JSONBin`);
                 showJSONBinStatus(`Loaded ${inventoryData.length} items from JSONBin`, 'success');
-
-                setTimeout(() => {
-                    hideJSONBinStatus();
-                }, 3000);
+                setTimeout(() => hideJSONBinStatus(), 3000);
             } else {
                 console.log('No data found in JSONBin');
                 showJSONBinStatus('No data found in JSONBin', 'info');
@@ -204,6 +198,99 @@ export async function loadFromJSONBin() {
     } catch (error) {
         console.error('❌ Load from JSONBin failed:', error);
         showJSONBinStatus('Load failed: ' + error.message, 'error');
+    }
+}
+
+/**
+ * Sync bills data to JSONBin
+ */
+import { billsData, saveBillsToStorage } from './store.js';
+
+export async function syncBillsToJSONBin() {
+    try {
+        showJSONBinStatus('Syncing bills to JSONBin...', 'loading');
+
+        const response = await fetch(`${BILLS_JSONBIN_CONFIG.baseUrl}/${BILLS_JSONBIN_CONFIG.binId}`, {
+            method: 'PUT',
+            headers: {
+                'X-Master-Key': BILLS_JSONBIN_CONFIG.apiKey,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(billsData)
+        });
+
+        if (response.ok) {
+            console.log('✅ Bills synced to JSONBin successfully');
+            showJSONBinStatus('Bills sync successful', 'success');
+            setTimeout(() => hideJSONBinStatus(), 3000);
+        } else {
+            throw new Error(`Bills sync failed: ${response.status} ${response.statusText}`);
+        }
+
+    } catch (error) {
+        console.error('❌ Bills sync to JSONBin failed:', error);
+        showJSONBinStatus('Bills sync failed: ' + error.message, 'error');
+    }
+}
+
+/**
+ * Load bills data from JSONBin to localStorage
+ */
+import { renderBillsTable } from './ui.js';
+
+export async function loadBillsFromJSONBinApi() {
+    try {
+        showJSONBinStatus('Loading bills from JSONBin...', 'loading');
+
+        const response = await fetch(`${BILLS_JSONBIN_CONFIG.baseUrl}/${BILLS_JSONBIN_CONFIG.binId}/latest`, {
+            headers: {
+                'X-Master-Key': BILLS_JSONBIN_CONFIG.apiKey
+            }
+        });
+
+        if (response.ok) {
+            const data = await response.json();
+            const jsonData = data.record || data; // JSONBin returns {record: [...]}
+
+            if (Array.isArray(jsonData) && jsonData.length > 0) {
+                // Clear existing array and push new data to maintain reference
+                billsData.length = 0;
+                billsData.push(...jsonData.map(bill => ({
+                    id: parseInt(bill.id) || 0,
+                    date: bill.date || '',
+                    itemId: parseInt(bill.itemId) || 0,
+                    itemName: bill.itemName || '',
+                    category: bill.category || '',
+                    quantity: parseInt(bill.quantity) || 1,
+                    purchasePrice: parseFloat(bill.purchasePrice) || 0,
+                    previousPurchasePrice: parseFloat(bill.previousPurchasePrice) || 0,
+                    timestamp: bill.timestamp || ''
+                })).filter(bill => bill.itemName && bill.date));
+
+                // Update nextBillId
+                if (billsData.length > 0) {
+                    nextBillId = Math.max(...billsData.map(bill => parseInt(bill.id))) + 1;
+                } else {
+                    nextBillId = 1;
+                }
+
+                saveBillsToStorage();
+                renderBillsTable();
+
+                console.log(`✅ Loaded ${billsData.length} bills from JSONBin`);
+                showJSONBinStatus(`Loaded ${billsData.length} bills from JSONBin`, 'success');
+                setTimeout(() => hideJSONBinStatus(), 3000);
+            } else {
+                console.log('No bills data found in JSONBin');
+                showJSONBinStatus('No bills data found in JSONBin', 'info');
+            }
+        } else {
+            throw new Error(`Bills load failed: ${response.status} ${response.statusText}`);
+        }
+
+    } catch (error) {
+        console.error('❌ Load bills from JSONBin failed:', error);
+        showJSONBinStatus('Bills load failed: ' + error.message, 'error');
     }
 }
 
@@ -238,128 +325,22 @@ function hideJSONBinStatus() {
 /**
  * Auto-sync to JSONBin when data changes
  */
-export function autoSyncToJSONBin() {
-    // Debounce sync to avoid too frequent API calls
-    clearTimeout(window.jsonbinSyncTimeout);
-    window.jsonbinSyncTimeout = setTimeout(() => {
-        syncToJSONBin();
-    }, 3000); // Wait 3 seconds after last change
-}
+
 
 /**
  * Auto-sync bills to JSONBin when data changes
  */
-export function autoSyncBillsToJSONBin() {
-    // Debounce sync to avoid too frequent API calls
-    clearTimeout(window.billsJsonbinSyncTimeout);
-    window.billsJsonbinSyncTimeout = setTimeout(() => {
-        syncBillsToJSONBin();
-    }, 3000); // Wait 3 seconds after last change
-}
+
 
 /**
  * Sync bills data to JSONBin
  */
-export async function syncBillsToJSONBin() {
-    if (billsData.length === 0) {
-        console.log('No bills data to sync');
-        showJSONBinStatus('No bills data to sync', 'info');
-        return;
-    }
 
-    try {
-        showJSONBinStatus('Syncing bills to JSONBin...', 'loading');
-
-        const response = await fetch(`${BILLS_JSONBIN_CONFIG.baseUrl}/${BILLS_JSONBIN_CONFIG.binId}`, {
-            method: 'PUT',
-            headers: {
-                'X-Master-Key': BILLS_JSONBIN_CONFIG.apiKey,
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(billsData)
-        });
-
-        if (response.ok) {
-            const result = await response.json();
-            console.log('✅ Bills data synced to JSONBin successfully');
-            showJSONBinStatus(`Synced ${billsData.length} bills to JSONBin`, 'success');
-
-            // Auto-hide success message after 3 seconds
-            setTimeout(() => {
-                hideJSONBinStatus();
-            }, 3000);
-        } else {
-            throw new Error(`Sync failed: ${response.status} ${response.statusText}`);
-        }
-
-    } catch (error) {
-        console.error('❌ Sync bills to JSONBin failed:', error);
-        showJSONBinStatus('Bills sync failed: ' + error.message, 'error');
-    }
-}
 
 /**
  * Load bills data from JSONBin to localStorage
  */
-export async function loadBillsFromJSONBin() {
-    try {
-        showJSONBinStatus('Loading bills from JSONBin...', 'loading');
 
-        const response = await fetch(`${BILLS_JSONBIN_CONFIG.baseUrl}/${BILLS_JSONBIN_CONFIG.binId}/latest`, {
-            headers: {
-                'X-Master-Key': BILLS_JSONBIN_CONFIG.apiKey
-            }
-        });
-
-        if (response.ok) {
-            const data = await response.json();
-            const jsonData = data.record || data; // JSONBin returns {record: [...]}
-
-            if (Array.isArray(jsonData) && jsonData.length > 0) {
-                // Convert data back to bills objects
-                billsData = jsonData.map(bill => ({
-                    id: parseInt(bill.id) || 0,
-                    date: bill.date || '',
-                    itemId: parseInt(bill.itemId) || 0,
-                    itemName: bill.itemName || '',
-                    category: bill.category || '',
-                    quantity: parseInt(bill.quantity) || 1,
-                    purchasePrice: parseFloat(bill.purchasePrice) || 0,
-                    previousPurchasePrice: parseFloat(bill.previousPurchasePrice) || 0,
-                    timestamp: bill.timestamp || ''
-                })).filter(bill => bill.itemName && bill.date); // Filter out invalid bills
-
-                // Update nextBillId
-                if (billsData.length > 0) {
-                    nextBillId = Math.max(...billsData.map(bill => parseInt(bill.id))) + 1;
-                } else {
-                    nextBillId = 1;
-                }
-
-                // Save to localStorage and update UI
-                saveBillsToStorage();
-                renderBillsTable();
-
-                console.log(`✅ Loaded ${billsData.length} bills from JSONBin`);
-                showJSONBinStatus(`Loaded ${billsData.length} bills from JSONBin`, 'success');
-
-                setTimeout(() => {
-                    hideJSONBinStatus();
-                }, 3000);
-            } else {
-                console.log('No bills data found in JSONBin');
-                showJSONBinStatus('No bills data found in JSONBin', 'info');
-            }
-        } else {
-            throw new Error(`Load failed: ${response.status} ${response.statusText}`);
-        }
-
-    } catch (error) {
-        console.error('❌ Load bills from JSONBin failed:', error);
-        showJSONBinStatus('Bills load failed: ' + error.message, 'error');
-    }
-}
 
 // Import necessary variables and functions
-import { inventoryData, nextId, billsData, nextBillId, saveDataToStorage, saveBillsToStorage } from './store.js';
 import { renderTable, renderBillsTable } from './ui.js';

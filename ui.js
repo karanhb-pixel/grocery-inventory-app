@@ -2,8 +2,13 @@
 // Grocery Inventory Tracker - UI Components (ui.js)
 // ==============================================================================
 
-import { inventoryData, currentSort, currentSearchTerm, filterInventoryData, sortData, billsData } from './store.js';
+import { inventoryData, currentSort, currentSearchTerm, filterInventoryData, sortData, billsData, calculateConsumption } from './store.js';
 
+
+// Import necessary functions
+import { initializeBillsJSONBin, syncBillsToJSONBin, loadBillsFromJSONBinApi } from './api.js';
+import { deleteBill } from './store.js';
+import { clearSearch } from './store.js';
 /**
  * Renders the inventory table using DocumentFragment for
  * optimal performance and minimal layout shifts.
@@ -178,6 +183,10 @@ export function showBillsView() {
 
     // Add bills sync buttons to UI
     addBillsSyncButtons();
+
+    // Load default 7-day restock insights
+    const consumptionData = calculateConsumption(7);
+    renderSummary(consumptionData);
 }
 
 /**
@@ -199,7 +208,7 @@ function addBillsSyncButtons() {
         <button id="sync-bills-to-jsonbin" class="sync-btn sync-to-jsonbin" onclick="syncBillsToJSONBin()">
             📤 Sync Bills to JSONBin
         </button>
-        <button id="load-bills-from-jsonbin" class="sync-btn load-from-jsonbin" onclick="loadBillsFromJSONBin()">
+        <button id="load-bills-from-jsonbin" class="sync-btn load-from-jsonbin" onclick="loadBillsFromJSONBinApi()">
             📥 Load Bills from JSONBin
         </button>
     `;
@@ -354,8 +363,45 @@ document.addEventListener('keydown', function(event) {
     }
 });
 
-// Import necessary functions
-import { initializeBillsJSONBin } from './api.js';
-import { syncBillsToJSONBin, loadBillsFromJSONBin } from './api.js';
-import { deleteBill } from './store.js';
-import { clearSearch } from './store.js';
+/**
+ * Render restock insights summary
+ * @param {Object} data - Consumption data object
+ */
+export function renderSummary(data) {
+    const insightsList = document.getElementById('insights-list');
+    insightsList.innerHTML = '';
+
+    // Convert object to array and sort by frequency descending
+    const sortedItems = Object.entries(data)
+        .sort(([, a], [, b]) => b.frequency - a.frequency);
+
+    // Create DocumentFragment for optimal performance
+    const fragment = document.createDocumentFragment();
+
+    sortedItems.forEach(([itemName, { totalQuantity, frequency }]) => {
+        const itemDiv = document.createElement('div');
+        itemDiv.className = 'insight-item';
+
+        itemDiv.innerHTML = `
+            <span class="insight-name">${itemName}</span>
+            <span class="insight-quantity">Total: ${totalQuantity}</span>
+            <span class="insight-frequency">Purchased: ${frequency} times</span>
+        `;
+
+        fragment.appendChild(itemDiv);
+    });
+
+    // Single DOM insertion
+    insightsList.appendChild(fragment);
+
+    // Show empty state if no data
+    if (sortedItems.length === 0) {
+        insightsList.innerHTML = `
+            <div class="empty-state">
+                <div class="empty-icon">📊</div>
+                <h3>No consumption data</h3>
+                <p>No bills found for the selected period.</p>
+            </div>
+        `;
+    }
+}

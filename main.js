@@ -2,9 +2,9 @@
 // Grocery Inventory Tracker - Main Entry Point (main.js)
 // ==============================================================================
 
-import { loadDataFromStorage, loadBillsFromStorage, handleAddItem, handleSortToggle, handleSearchInput, clearSearch, handleAddBill } from './store.js';
+import { loadDataFromStorage, loadBillsFromStorage, handleAddItem, handleSortToggle, handleSearchInput, clearSearch, handleAddBill, calculateConsumption } from './store.js';
 import { initializeJSONBin, initializeBillsJSONBin } from './api.js';
-import { renderTable, showBillsView, showInventoryView, addNewBill, cancelBill, toggleDataModal } from './ui.js';
+import { renderTable, showBillsView, showInventoryView, addNewBill, cancelBill, toggleDataModal, renderSummary } from './ui.js';
 
 // Make functions global for onclick handlers in HTML
 window.handleAddItem = handleAddItem;
@@ -20,7 +20,7 @@ window.toggleDataModal = toggleDataModal;
 
 // Import other functions that might be called from HTML
 import { handleEdit, handleRemove, handleEditCard, handleRemoveCard, deleteBill, exportData, importData, exportToCSV, importFromCSV, clearAllData } from './store.js';
-import { syncToJSONBin, loadFromJSONBin, syncBillsToJSONBin, loadBillsFromJSONBin } from './api.js';
+import { syncToJSONBin, loadFromJSONBin, syncBillsToJSONBin, loadBillsFromJSONBinApi } from './api.js';
 
 window.handleEdit = handleEdit;
 window.handleRemove = handleRemove;
@@ -35,7 +35,10 @@ window.clearAllData = clearAllData;
 window.syncToJSONBin = syncToJSONBin;
 window.loadFromJSONBin = loadFromJSONBin;
 window.syncBillsToJSONBin = syncBillsToJSONBin;
-window.loadBillsFromJSONBin = loadBillsFromJSONBin;
+window.loadBillsFromJSONBin = loadBillsFromJSONBinApi;
+window.loadFromJSONBin = loadFromJSONBin;
+window.syncToJSONBin = syncToJSONBin;
+
 
 document.addEventListener('DOMContentLoaded', async () => {
     // 1. Set up event listeners
@@ -51,6 +54,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('back-to-inventory').addEventListener('click', showInventoryView);
     document.getElementById('add-new-bill').addEventListener('click', addNewBill);
     document.getElementById('bill-form').addEventListener('submit', handleAddBill);
+
+    // Set up restock insights event listener
+    document.getElementById('restock-period').addEventListener('change', function() {
+        const days = parseInt(this.value);
+        const consumptionData = calculateConsumption(days);
+        renderSummary(consumptionData);
+    });
 
     // Set up main bills button
     document.getElementById('show-bills-main').addEventListener('click', showBillsView);

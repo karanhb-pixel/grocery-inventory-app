@@ -124,6 +124,14 @@
             <div class="bills-controls">
                 <button id="back-to-inventory" class="back-btn" onclick="showInventoryView()">← Back to Inventory</button>
                 <button id="add-new-bill" class="add-bill-btn" onclick="addNewBill()">➕ Add New Bill</button>
+                <div class="restock-controls">
+                    <label for="restock-period">Restock Insights:</label>
+                    <select id="restock-period">
+                        <option value="7">7 Days</option>
+                        <option value="14">14 Days</option>
+                        <option value="30">30 Days</option>
+                    </select>
+                </div>
             </div>
             
             <!-- Bills Form -->
@@ -174,6 +182,14 @@
                         <!-- Bills will be displayed here -->
                     </tbody>
                 </table>
+            </div>
+
+            <!-- Restock Insights Section -->
+            <div id="restock-insights" class="restock-insights">
+                <h3>🔄 Restock Insights</h3>
+                <div id="insights-list" class="insights-list">
+                    <!-- Insights will be displayed here -->
+                </div>
             </div>
         </div>
     </div>

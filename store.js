@@ -2,6 +2,9 @@
 // Grocery Inventory Tracker - Data Management (store.js)
 // ==============================================================================
 
+// Import configurations and status functions from api.js
+import { JSONBIN_CONFIG, BILLS_JSONBIN_CONFIG, showJSONBinStatus, hideJSONBinStatus } from './api.js';
+
 // Global State
 export let inventoryData = [];
 export let currentSort = 'name'; // 'name' or 'category'
@@ -16,6 +19,42 @@ export const BILLS_STORAGE_KEY = 'grocery_bills_data';
 // Bills data
 export let billsData = [];
 export let nextBillId = 1;
+
+// ==============================================================================
+// Restock Insights Functions
+// ==============================================================================
+
+/**
+ * Get start date timestamp for X days ago
+ * @param {number} days - Number of days ago
+ * @returns {number} Timestamp for the start date
+ */
+export function getStartDate(days) {
+    const date = new Date();
+    date.setDate(date.getDate() - days);
+    date.setHours(0, 0, 0, 0);
+    return date.getTime();
+}
+
+/**
+ * Calculate consumption data for the given days limit
+ * @param {number} daysLimit - Number of days to look back
+ * @returns {Object} Object with itemName keys, each containing totalQuantity and frequency
+ */
+export function calculateConsumption(daysLimit) {
+    const startTimestamp = getStartDate(daysLimit);
+    const filteredBills = billsData.filter(bill => new Date(bill.date).getTime() >= startTimestamp);
+
+    return filteredBills.reduce((acc, bill) => {
+        const itemName = bill.itemName;
+        if (!acc[itemName]) {
+            acc[itemName] = { totalQuantity: 0, frequency: 0 };
+        }
+        acc[itemName].totalQuantity += bill.quantity;
+        acc[itemName].frequency += 1;
+        return acc;
+    }, {});
+}
 
 // ==============================================================================
 // localStorage Data Management
@@ -590,6 +629,101 @@ export function exportToCSV() {
 }
 
 /**
+ * Load inventory data from JSONBin
+ */
+export function loadInventoryFromJSONBin(jsonData) {
+    // Clear existing array and push new data to maintain reference
+    inventoryData.length = 0;
+    inventoryData.push(...jsonData.map(item => ({
+        id: parseInt(item.id) || 0,
+        name: item.name || '',
+        price: parseFloat(item.price) || 0,
+        purchasePrice: parseFloat(item.purchasePrice) || 0,
+        category: item.category || '',
+        status: item.status || 'Active'
+    })).filter(item => item.name && item.category)); // Filter out invalid rows
+
+    // Update nextId
+    if (inventoryData.length > 0) {
+        nextId = Math.max(...inventoryData.map(item => parseInt(item.id))) + 1;
+    } else {
+        nextId = 1;
+    }
+
+    // Save to localStorage
+    saveDataToStorage();
+}
+
+/**
+ * Load bills data from JSONBin
+ */
+export function _loadBillsFromJSONBin(jsonData) {
+    // Clear existing array and push new data to maintain reference
+    billsData.length = 0;
+    billsData.push(...jsonData.map(bill => ({
+        id: parseInt(bill.id) || 0,
+        date: bill.date || '',
+        itemId: parseInt(bill.itemId) || 0,
+        itemName: bill.itemName || '',
+        category: bill.category || '',
+        quantity: parseInt(bill.quantity) || 1,
+        purchasePrice: parseFloat(bill.purchasePrice) || 0,
+        previousPurchasePrice: parseFloat(bill.previousPurchasePrice) || 0,
+        timestamp: bill.timestamp || ''
+    })).filter(bill => bill.itemName && bill.date)); // Filter out invalid bills
+
+    // Update nextBillId
+    if (billsData.length > 0) {
+        nextBillId = Math.max(...billsData.map(bill => parseInt(bill.id))) + 1;
+    } else {
+        nextBillId = 1;
+    }
+
+    // Save to localStorage
+    saveBillsToStorage();
+}
+
+export async function loadBillsFromJSONBinApi() {
+    try {
+        showJSONBinStatus('Loading bills from JSONBin...', 'loading');
+
+        const response = await fetch(`${BILLS_JSONBIN_CONFIG.baseUrl}/${BILLS_JSONBIN_CONFIG.binId}/latest`, {
+            headers: {
+                'X-Master-Key': BILLS_JSONBIN_CONFIG.apiKey
+            }
+        });
+
+        if (response.ok) {
+            const data = await response.json();
+            const jsonData = data.record || data; // JSONBin returns {record: [...]}
+
+            if (Array.isArray(jsonData) && jsonData.length > 0) {
+                // Load bills data from JSONBin
+                _loadBillsFromJSONBin(jsonData);
+                // Update UI
+                renderBillsTable();
+
+                console.log(`✅ Loaded ${billsData.length} bills from JSONBin`);
+                showJSONBinStatus(`Loaded ${billsData.length} bills from JSONBin`, 'success');
+
+                setTimeout(() => {
+                    hideJSONBinStatus();
+                }, 3000);
+            } else {
+                console.log('No bills data found in JSONBin');
+                showJSONBinStatus('No bills data found in JSONBin', 'info');
+            }
+        } else {
+            throw new Error(`Load failed: ${response.status} ${response.statusText}`);
+        }
+
+    } catch (error) {
+        console.error('❌ Load bills from JSONBin failed:', error);
+        showJSONBinStatus('Bills load failed: ' + error.message, 'error');
+    }
+}
+
+/**
  * Import data from CSV file
  */
 export function importFromCSV(event) {
@@ -685,4 +819,3 @@ export function importFromCSV(event) {
 
 // Import renderTable and other UI functions from ui.js
 import { renderTable, renderBillsTable, cancelBill } from './ui.js';
-import { autoSyncToJSONBin, autoSyncBillsToJSONBin } from './api.js';
