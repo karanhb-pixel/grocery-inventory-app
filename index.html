@@ -18,7 +18,7 @@
         <div id="sheets-sync-section" class="sheets-sync-section">
             <div class="sync-group">
                 <span id="jsonbin-status" class="jsonbin-status"></span>
-                <h4>JSONBin.io Cloud Sync</h4>
+                <h4 id="sync-header">Inventory Cloud Sync</h4>
                 <button id="sync-to-jsonbin" class="sync-btn sync-to-jsonbin">
                     📤 Sync to JSONBin
                 </button>
@@ -125,14 +125,13 @@
                 <button id="back-to-inventory" class="back-btn">← Back to Inventory</button>
                 <button id="add-new-bill" class="add-bill-btn">➕ Add New Bill</button>
                 
-                <div class="sync-group" style="display: inline-flex; gap: 10px; margin-left: 10px;">
-                    <button id="sync-bills" class="sync-btn" title="Sync Bills to Cloud">📤 Sync Bills</button>
-                    <button id="load-bills" class="sync-btn" title="Load Bills from Cloud">📥 Load Bills</button>
+                <div class="sync-group" style="display: none;">
+                   <!-- Moved to header -->
                 </div>
 
-                <div class="filter-group" style="display: inline-flex; gap: 10px; margin-left: 10px; align-items: center;">
+                <div class="filter-group">
                     <input type="date" id="bill-filter-date" title="Filter by Date">
-                    <button id="clear-bill-filter" class="clear-btn" style="padding: 5px 10px; font-size: 0.9em;">Clear Filter</button>
+                    <button id="clear-bill-filter" class="clear-btn">Clear Filter</button>
                 </div>
 
                 <div class="restock-controls">

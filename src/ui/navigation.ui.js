@@ -4,12 +4,29 @@ export function initNavigation() {
   const billsPanel = document.getElementById('bills-panel');
   const showBillsBtns = document.querySelectorAll('.bills-btn');
   const backToInventoryBtn = document.getElementById('back-to-inventory');
+  
+  const inventorySync = document.getElementById('inventory-sync-controls');
+  const billsSync = document.getElementById('bills-sync-controls');
+  const syncHeader = document.getElementById('sync-header');
+
+  const toggleSync = (view) => {
+    if(view === 'bills') {
+      if(inventorySync) inventorySync.style.display = 'none';
+      if(billsSync) billsSync.style.display = 'block';
+      if(syncHeader) syncHeader.textContent = 'Bills Cloud Sync';
+    } else {
+      if(inventorySync) inventorySync.style.display = 'block';
+      if(billsSync) billsSync.style.display = 'none';
+      if(syncHeader) syncHeader.textContent = 'Inventory Cloud Sync';
+    }
+  };
 
   showBillsBtns.forEach(btn => {
     btn.addEventListener('click', () => {
       inputPanel.style.display = 'none';
       inventoryPanel.style.display = 'none';
       billsPanel.style.display = 'block';
+      toggleSync('bills');
     });
   });
 
@@ -18,6 +35,7 @@ export function initNavigation() {
       inputPanel.style.display = 'block';
       inventoryPanel.style.display = 'block';
       billsPanel.style.display = 'none';
+      toggleSync('inventory');
     });
   }
 }

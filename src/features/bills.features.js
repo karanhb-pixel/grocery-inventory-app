@@ -14,6 +14,14 @@ export function deleteBill(id) {
   saveBills();
 }
 
+export function updateBill(id, updated) {
+  const index = state.bills.findIndex(b => b.id === id);
+  if (index !== -1) {
+    state.bills[index] = { ...state.bills[index], ...updated };
+    saveBills();
+  }
+}
+
 export function getLastBillPrice(itemName) {
   const itemBills = state.bills.filter(b => b.itemName === itemName);
   if (itemBills.length === 0) return 0;

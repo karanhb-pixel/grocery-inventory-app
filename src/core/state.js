@@ -5,5 +5,7 @@ export const state = {
   nextBillId: 1,
   sortBy: 'name',
   searchTerm: '',
-  billFilterDate: null
+  billFilterDate: null,
+  editingId: null,
+  editingBillId: null
 };

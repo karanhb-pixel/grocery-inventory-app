@@ -2,11 +2,11 @@ import { loadStorage } from './core/storage.js';
 import { state } from './core/state.js';
 
 // Fixed plural import paths
-import { addItem, deleteItem } from './features/inventory.features.js';
-import { addBill, deleteBill, getLastBillPrice } from './features/bills.features.js';
+import { addItem, deleteItem, updateItem } from './features/inventory.features.js';
+import { addBill, deleteBill, updateBill, getLastBillPrice } from './features/bills.features.js';
 
-import { renderInventory } from './ui/inventory.ui.js';
-import { renderBills } from './ui/bills.ui.js';
+import { renderInventory, cancelEdit, initInventoryUI } from './ui/inventory.ui.js';
+import { renderBills, cancelEditBill, initBillsUI } from './ui/bills.ui.js';
 import { initNavigation, initModals, initBillsFormUI } from './ui/navigation.ui.js';
 
 import {
@@ -22,7 +22,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const itemName = document.getElementById('itemName');
   const itemPrice = document.getElementById('itemPrice');
   const category = document.getElementById('category');
-  const inventoryTable = document.getElementById('inventory-table');
+  // inventoryTable selection removed as it is handled in initInventoryUI
 
   const billForm = document.getElementById('bill-form');
   const billDate = document.getElementById('bill-date');
@@ -44,35 +44,35 @@ document.addEventListener('DOMContentLoaded', () => {
   initNavigation();
   initModals();
   initBillsFormUI();
+  initInventoryUI(); // Wired up logic for Search, Sort, Edit, Delete
+  initBillsUI(); // Wired up logic for Bills Edit/Delete
 
   /* INVENTORY */
   if (itemForm) {
       itemForm.addEventListener('submit', e => {
         e.preventDefault();
-        addItem({
+        
+        const itemData = {
           name: itemName.value,
           price: +itemPrice.value,
           category: category.value
-        });
-        renderInventory();
-        itemForm.reset();
-      });
-  }
+        };
 
-  if (inventoryTable) {
-      inventoryTable.addEventListener('click', e => {
-        const row = e.target.closest('tr');
-        if (!row) return;
-
-        if (e.target.classList.contains('delete-btn')) {
-          // Verify if dataset.id exists and is valid
-          if(row.dataset.id) {
-             deleteItem(+row.dataset.id);
-             renderInventory();
-          }
+        if (state.editingId) {
+          // Update existing item
+          updateItem(state.editingId, itemData);
+          cancelEdit(); // Reset form and mode
+        } else {
+          // Add new item
+          addItem(itemData);
+          itemForm.reset();
         }
+        
+        renderInventory();
       });
   }
+
+  /* Removed redundant inventoryTable listener - handled in initInventoryUI */
 
   /* BILLS */
   if (billItem) {
@@ -93,25 +93,26 @@ document.addEventListener('DOMContentLoaded', () => {
 
   billForm?.addEventListener('submit', e => {
     e.preventDefault();
-    addBill({
+    
+    const billData = {
       date: billDate.value,
-      itemName: billItem.value, // Read directly from input
+      itemName: billItem.value,
       quantity: +billQuantity.value,
       purchasePrice: +billPurchasePrice.value
-    });
+    };
+
+    if (state.editingBillId) {
+       updateBill(state.editingBillId, billData);
+       cancelEditBill();
+    } else {
+       addBill(billData);
+       billForm.reset();
+    }
+    
     renderBills();
-    billForm.reset();
   });
 
-  billsTable?.addEventListener('click', e => {
-    const row = e.target.closest('tr');
-    if (row && e.target.classList.contains('delete-bill')) {
-      if(row.dataset.id) {
-        deleteBill(+row.dataset.id);
-        renderBills();
-      }
-    }
-  });
+  /* Removed redundant billsTable listener - handled in initBillsUI */
 
   /* JSONBIN */
   if (syncToJsonBinBtn) {

@@ -74,9 +74,56 @@ export function initInventoryUI() {
         }
       }
       if (e.target.classList.contains('edit-btn')) {
-         // Placeholder for edit
-         console.log('Edit clicked');
+         const tr = e.target.closest('tr');
+         if (tr) {
+           const id = Number(tr.dataset.id);
+           const item = state.inventory.find(i => i.id === id);
+           if (item) {
+             startEdit(item);
+           }
+         }
       }
     });
   }
+}
+
+function startEdit(item) {
+  state.editingId = item.id;
+  
+  // Populate Form
+  const nameInput = document.getElementById('itemName');
+  const priceInput = document.getElementById('itemPrice');
+  const catInput = document.getElementById('category');
+
+  if (nameInput) nameInput.value = item.name;
+  if (priceInput) priceInput.value = item.price;
+  if (catInput) catInput.value = item.category;
+  
+  // Change Button Text
+  const submitBtn = document.querySelector('#item-form button[type="submit"]');
+  if (submitBtn) submitBtn.textContent = 'Update Item';
+  
+  // Show Cancel Button
+  let cancelBtn = document.getElementById('cancel-edit-btn');
+  if (!cancelBtn) {
+    cancelBtn = document.createElement('button');
+    cancelBtn.id = 'cancel-edit-btn';
+    cancelBtn.type = 'button';
+    cancelBtn.className = 'cancel-btn';
+    cancelBtn.textContent = 'Cancel Edit';
+    cancelBtn.style.marginLeft = '10px';
+    cancelBtn.onclick = cancelEdit;
+    submitBtn.parentNode.appendChild(cancelBtn);
+  }
+}
+
+export function cancelEdit() {
+  state.editingId = null;
+  document.getElementById('item-form').reset();
+  
+  const submitBtn = document.querySelector('#item-form button[type="submit"]');
+  if (submitBtn) submitBtn.textContent = 'Add Item';
+  
+  const cancelBtn = document.getElementById('cancel-edit-btn');
+  if (cancelBtn) cancelBtn.remove();
 }
