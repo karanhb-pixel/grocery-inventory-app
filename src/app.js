@@ -1,52 +1,143 @@
-import { loadStorage } from "./core/storage.js";
-import { addItem, deleteItem } from "./features/inventory.feature.js";
-import { renderInventory } from "./ui/inventory.ui.js";
-import { syncInventory, loadInventory } from "./services/jsonbin.service.js";
-import { addBill, deleteBill } from "./features/bills.features.js";
-import { renderBills } from "./ui/bills.ui.js";
+import { loadStorage } from './core/storage.js';
+import { state } from './core/state.js';
 
-document.addEventListener("DOMContentLoaded", () => {
+// Fixed plural import paths
+import { addItem, deleteItem } from './features/inventory.features.js';
+import { addBill, deleteBill } from './features/bills.features.js';
+
+import { renderInventory } from './ui/inventory.ui.js';
+import { renderBills } from './ui/bills.ui.js';
+import { initNavigation, initModals, initBillsFormUI } from './ui/navigation.ui.js';
+
+import {
+  syncInventory,
+  loadInventory,
+  syncBills,
+  loadBills
+} from './services/jsonbin.service.js';
+
+document.addEventListener('DOMContentLoaded', () => {
+  // Select DOM Elements
+  const itemForm = document.getElementById('item-form');
+  const itemName = document.getElementById('itemName');
+  const sellingPrice = document.getElementById('sellingPrice');
+  const purchasePrice = document.getElementById('purchasePrice');
+  const category = document.getElementById('category');
+  const inventoryTable = document.getElementById('inventory-table');
+
+  const billForm = document.getElementById('bill-form');
+  const billDate = document.getElementById('bill-date');
+  const billItem = document.getElementById('bill-item');
+  const billQuantity = document.getElementById('bill-quantity');
+  const billPurchasePrice = document.getElementById('bill-purchase-price');
+  const billsTable = document.getElementById('bills-table');
+
+  const syncToJsonBinBtn = document.getElementById('sync-to-jsonbin');
+  const loadFromJsonBinBtn = document.getElementById('load-from-jsonbin');
+  const syncBillsBtn = document.getElementById('sync-bills');
+  const loadBillsBtn = document.getElementById('load-bills');
+
   loadStorage();
   renderInventory();
+  renderBills();
 
-  document.getElementById("item-form").addEventListener("submit", (e) => {
-    e.preventDefault();
-    addItem({
-      name: itemName.value,
-      price: +sellingPrice.value,
-      purchasePrice: +purchasePrice.value,
-      category: category.value,
-    });
-    renderInventory();
-  });
+  // Initialize UI handlers
+  initNavigation();
+  initModals();
+  initBillsFormUI();
 
-  document.querySelector("#inventory-table").addEventListener("click", (e) => {
-    const row = e.target.closest("tr");
-    if (e.target.classList.contains("delete-btn")) {
-      deleteItem(+row.dataset.id);
-      renderInventory();
-    }
-  });
+  /* INVENTORY */
+  if (itemForm) {
+      itemForm.addEventListener('submit', e => {
+        e.preventDefault();
+        addItem({
+          name: itemName.value,
+          price: +sellingPrice.value,
+          purchasePrice: +purchasePrice.value,
+          category: category.value
+        });
+        renderInventory();
+        itemForm.reset();
+      });
+  }
 
-  document
-    .getElementById("sync-to-jsonbin")
-    .addEventListener("click", syncInventory);
+  if (inventoryTable) {
+      inventoryTable.addEventListener('click', e => {
+        const row = e.target.closest('tr');
+        if (!row) return;
 
-  document.getElementById("bill-form")?.addEventListener("submit", (e) => {
+        if (e.target.classList.contains('delete-btn')) {
+          // Verify if dataset.id exists and is valid
+          if(row.dataset.id) {
+             deleteItem(+row.dataset.id);
+             renderInventory();
+          }
+        }
+      });
+  }
+
+  /* BILLS */
+  /* BILLS */
+  billForm?.addEventListener('submit', e => {
     e.preventDefault();
     addBill({
       date: billDate.value,
-      itemName: billItem.options[billItem.selectedIndex].text,
+      itemName: billItem.value, // Read directly from input
       quantity: +billQuantity.value,
-      purchasePrice: +billPurchasePrice.value,
+      purchasePrice: +billPurchasePrice.value
     });
     renderBills();
+    billForm.reset();
   });
 
-  document
-    .getElementById("load-from-jsonbin")
-    ?.addEventListener("click", async () => {
+  billsTable?.addEventListener('click', e => {
+    const row = e.target.closest('tr');
+    if (row && e.target.classList.contains('delete-bill')) {
+      if(row.dataset.id) {
+        deleteBill(+row.dataset.id);
+        renderBills();
+      }
+    }
+  });
+
+  /* JSONBIN */
+  if (syncToJsonBinBtn) {
+    syncToJsonBinBtn.addEventListener('click', () => {
+      console.log('Sync to JSONBin clicked');
+      syncInventory();
+    });
+  } else {
+    console.error('Sync to JSONBin button NOT found');
+  }
+
+  if (loadFromJsonBinBtn) {
+    loadFromJsonBinBtn.addEventListener('click', async () => {
+      console.log('Load from JSONBin clicked');
       await loadInventory();
+      console.log('Inventory loaded, rendering...');
       renderInventory();
     });
+  } else {
+    console.error('Load from JSONBin button NOT found');
+  }
+
+  if (syncBillsBtn) {
+    syncBillsBtn.addEventListener('click', () => {
+      console.log('Sync Bills clicked');
+      syncBills();
+    });
+  } else {
+    console.warn('Sync Bills button NOT found');
+  }
+
+  if (loadBillsBtn) {
+    loadBillsBtn.addEventListener('click', async () => {
+      console.log('Load Bills clicked');
+      await loadBills();
+      console.log('Bills loaded, rendering...');
+      renderBills();
+    });
+  } else {
+    console.warn('Load Bills button NOT found');
+  }
 });

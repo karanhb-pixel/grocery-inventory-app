@@ -8,6 +8,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
+    <link rel="icon" href="data:,">
 </head>
 <body>
     <div class="container">
@@ -18,10 +19,10 @@
             <div class="sync-group">
                 <span id="jsonbin-status" class="jsonbin-status"></span>
                 <h4>JSONBin.io Cloud Sync</h4>
-                <button id="sync-to-jsonbin" class="sync-btn sync-to-jsonbin" onclick="syncToJSONBin()">
+                <button id="sync-to-jsonbin" class="sync-btn sync-to-jsonbin">
                     📤 Sync to JSONBin
                 </button>
-                <button id="load-from-jsonbin" class="sync-btn load-from-jsonbin" onclick="loadFromJSONBin()">
+                <button id="load-from-jsonbin" class="sync-btn load-from-jsonbin">
                     📥 Load from JSONBin
                 </button>
             </div>
@@ -30,7 +31,7 @@
         <div id="input-panel">
             <div class="input-header">
                 <h2>Add New Item</h2>
-                <button id="show-bills-main" class="bills-btn main-bills-btn" onclick="showBillsView()">
+                <button id="show-bills-main" class="bills-btn main-bills-btn">
                     📄 View Bills
                 </button>
             </div>
@@ -67,33 +68,33 @@
                     <button id="clear-search" class="clear-search-btn" style="display: none;">✕</button>
                 </div>
                 <button id="toggle-sort">Sort by: Name (A-Z)</button>
-                <button id="show-bills" class="bills-btn" onclick="showBillsView()">📄 View Bills</button>
+                <button id="show-bills" class="bills-btn">📄 View Bills</button>
                 
                 <!-- Desktop Data Management -->
                 <div class="data-management desktop-only">
                     <h3>Data Management</h3>
                     <div class="import-export-buttons">
-                        <button onclick="exportToCSV()" class="export-btn">Export to CSV</button>
-                        <button onclick="exportData()" class="export-btn">Export to JSON</button>
+                        <button id="export-csv-btn" class="export-btn">Export to CSV</button>
+                        <button id="export-json-btn" class="export-btn">Export to JSON</button>
                         
                         <div class="import-section">
                             <label for="csv-import" class="import-label">Import from CSV:</label>
-                            <input type="file" id="csv-import" accept=".csv" onchange="importFromCSV(event)" style="display: none;">
-                            <button onclick="document.getElementById('csv-import').click()" class="import-btn">Choose CSV File</button>
+                            <input type="file" id="csv-import" accept=".csv" style="display: none;">
+                            <button id="import-csv-trigger" class="import-btn">Choose CSV File</button>
                         </div>
                         
                         <div class="import-section">
                             <label for="json-import" class="import-label">Import from JSON:</label>
-                            <input type="file" id="json-import" accept=".json" onchange="importData(event)" style="display: none;">
-                            <button onclick="document.getElementById('json-import').click()" class="import-btn">Choose JSON File</button>
+                            <input type="file" id="json-import" accept=".json" style="display: none;">
+                            <button id="import-json-trigger" class="import-btn">Choose JSON File</button>
                         </div>
                         
-                        <button onclick="clearAllData()" class="clear-btn">Clear All Data</button>
+                        <button id="clear-data-btn" class="clear-btn">Clear All Data</button>
                     </div>
                 </div>
                 
                 <!-- Mobile Data Button -->
-                <button id="mobile-data-btn" class="mobile-data-btn mobile-only" onclick="toggleDataModal()">
+                <button id="mobile-data-btn" class="mobile-data-btn mobile-only">
                     📊 Data
                 </button>
             </div>
@@ -123,8 +124,14 @@
         <div id="bills-panel" class="bills-panel" style="display: none;">
             <h2>📄 Bills Management</h2>
             <div class="bills-controls">
-                <button id="back-to-inventory" class="back-btn" onclick="showInventoryView()">← Back to Inventory</button>
-                <button id="add-new-bill" class="add-bill-btn" onclick="addNewBill()">➕ Add New Bill</button>
+                <button id="back-to-inventory" class="back-btn">← Back to Inventory</button>
+                <button id="add-new-bill" class="add-bill-btn">➕ Add New Bill</button>
+                
+                <div class="sync-group" style="display: inline-flex; gap: 10px; margin-left: 10px;">
+                    <button id="sync-bills" class="sync-btn" title="Sync Bills to Cloud">📤 Sync Bills</button>
+                    <button id="load-bills" class="sync-btn" title="Load Bills from Cloud">📥 Load Bills</button>
+                </div>
+
                 <div class="restock-controls">
                     <label for="restock-period">Restock Insights:</label>
                     <select id="restock-period">
@@ -144,10 +151,10 @@
                     </div>
                     <div class="form-row">
                         <label for="bill-item">Item:</label>
-                        <select id="bill-item" required>
-                            <option value="" disabled selected>Select an item</option>
+                        <input type="text" id="bill-item" list="bill-item-options" placeholder="Search or select an item" required autocomplete="off">
+                        <datalist id="bill-item-options">
                             <!-- Items will be populated from inventory -->
-                        </select>
+                        </datalist>
                     </div>
                     <div class="form-row">
                         <label for="bill-quantity">Quantity:</label>
@@ -162,7 +169,7 @@
                         <span id="previous-purchase-price">₹0.00</span>
                     </div>
                     <button type="submit" class="submit-bill-btn">Add to Bill</button>
-                    <button type="button" class="cancel-bill-btn" onclick="cancelBill()">Cancel</button>
+                    <button type="button" class="cancel-bill-btn" id="cancel-bill-btn">Cancel</button>
                 </form>
             </div>
             
@@ -200,34 +207,34 @@
         <div class="data-modal-content">
             <div class="data-modal-header">
                 <h3>Data Management</h3>
-                <button class="close-modal" onclick="toggleDataModal()">&times;</button>
+                <button class="close-modal">&times;</button>
             </div>
             
             <div class="data-modal-body">
                 <h4>Export Data</h4>
                 <div class="modal-buttons">
-                    <button onclick="exportToCSV(); toggleDataModal();" class="export-btn">📄 Export to CSV</button>
-                    <button onclick="exportData(); toggleDataModal();" class="export-btn">📋 Export to JSON</button>
+                    <button id="mobile-export-csv" class="export-btn">📄 Export to CSV</button>
+                    <button id="mobile-export-json" class="export-btn">📋 Export to JSON</button>
                 </div>
                 
                 <h4>Import Data</h4>
                 <div class="modal-buttons">
-                    <input type="file" id="mobile-csv-import" accept=".csv" onchange="importFromCSV(event)" style="display: none;">
-                    <button onclick="document.getElementById('mobile-csv-import').click()" class="import-btn">📁 Import from CSV</button>
+                    <input type="file" id="mobile-csv-import" accept=".csv" style="display: none;">
+                    <button id="mobile-import-csv-trigger" class="import-btn">📁 Import from CSV</button>
                     
-                    <input type="file" id="mobile-json-import" accept=".json" onchange="importData(event)" style="display: none;">
-                    <button onclick="document.getElementById('mobile-json-import').click()" class="import-btn">📁 Import from JSON</button>
+                    <input type="file" id="mobile-json-import" accept=".json" style="display: none;">
+                    <button id="mobile-import-json-trigger" class="import-btn">📁 Import from JSON</button>
                 </div>
                 
                 <h4>Data Actions</h4>
                 <div class="modal-buttons">
-                    <button onclick="clearAllData(); toggleDataModal();" class="clear-btn">🗑️ Clear All Data</button>
+                    <button id="mobile-clear-data" class="clear-btn">🗑️ Clear All Data</button>
                 </div>
             </div>
         </div>
     </div>
 
-    <script type="module" src="./src/app.js"></script>
+    <script type="module" src="./src/app.js?v=2.0"></script>
 
 </body>
 </html>
