@@ -4,5 +4,6 @@ export const state = {
   nextItemId: 1,
   nextBillId: 1,
   sortBy: 'name',
-  searchTerm: ''
+  searchTerm: '',
+  billFilterDate: null
 };

@@ -3,7 +3,7 @@ import { state } from './core/state.js';
 
 // Fixed plural import paths
 import { addItem, deleteItem } from './features/inventory.features.js';
-import { addBill, deleteBill } from './features/bills.features.js';
+import { addBill, deleteBill, getLastBillPrice } from './features/bills.features.js';
 
 import { renderInventory } from './ui/inventory.ui.js';
 import { renderBills } from './ui/bills.ui.js';
@@ -20,8 +20,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // Select DOM Elements
   const itemForm = document.getElementById('item-form');
   const itemName = document.getElementById('itemName');
-  const sellingPrice = document.getElementById('sellingPrice');
-  const purchasePrice = document.getElementById('purchasePrice');
+  const itemPrice = document.getElementById('itemPrice');
   const category = document.getElementById('category');
   const inventoryTable = document.getElementById('inventory-table');
 
@@ -52,8 +51,7 @@ document.addEventListener('DOMContentLoaded', () => {
         e.preventDefault();
         addItem({
           name: itemName.value,
-          price: +sellingPrice.value,
-          purchasePrice: +purchasePrice.value,
+          price: +itemPrice.value,
           category: category.value
         });
         renderInventory();
@@ -77,7 +75,22 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   /* BILLS */
-  /* BILLS */
+  if (billItem) {
+    billItem.addEventListener('change', () => {
+       const price = getLastBillPrice(billItem.value);
+       if(billPurchasePrice) {
+         billPurchasePrice.value = price || '';
+       }
+    });
+
+    billItem.addEventListener('input', () => {
+       const price = getLastBillPrice(billItem.value);
+       if(billPurchasePrice && price) {
+          billPurchasePrice.value = price;
+       }
+    });
+  }
+
   billForm?.addEventListener('submit', e => {
     e.preventDefault();
     addBill({
@@ -139,5 +152,24 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   } else {
     console.warn('Load Bills button NOT found');
+  }
+
+  /* BILLS FILTER */
+  const billFilterDate = document.getElementById('bill-filter-date');
+  const clearBillFilter = document.getElementById('clear-bill-filter');
+
+  if (billFilterDate) {
+    billFilterDate.addEventListener('change', (e) => {
+      state.billFilterDate = e.target.value;
+      renderBills();
+    });
+  }
+
+  if (clearBillFilter) {
+    clearBillFilter.addEventListener('click', () => {
+      state.billFilterDate = null;
+      if (billFilterDate) billFilterDate.value = '';
+      renderBills();
+    });
   }
 });
