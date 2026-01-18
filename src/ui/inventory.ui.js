@@ -90,40 +90,52 @@ export function initInventoryUI() {
 function startEdit(item) {
   state.editingId = item.id;
   
-  // Populate Form
-  const nameInput = document.getElementById('itemName');
-  const priceInput = document.getElementById('itemPrice');
-  const catInput = document.getElementById('category');
+  // Show the form container
+  const itemFormContainer = document.getElementById('item-form-container');
+  if (itemFormContainer) {
+    itemFormContainer.style.display = 'block';
+  }
+  
+  // Get the first row inputs (using name attributes)
+  const firstRow = document.querySelector('.item-row[data-row-id="0"]');
+  if (!firstRow) return;
 
+  const nameInput = firstRow.querySelector('[name="itemName"]');
+  const priceInput = firstRow.querySelector('[name="itemPrice"]');
+  const categorySelect = firstRow.querySelector('[name="category"]');
+
+  // Populate form with item data
   if (nameInput) nameInput.value = item.name;
   if (priceInput) priceInput.value = item.price;
-  if (catInput) catInput.value = item.category;
+  if (categorySelect) categorySelect.value = item.category;
   
   // Change Button Text
   const submitBtn = document.querySelector('#item-form button[type="submit"]');
   if (submitBtn) submitBtn.textContent = 'Update Item';
-  
-  // Show Cancel Button
-  let cancelBtn = document.getElementById('cancel-edit-btn');
-  if (!cancelBtn) {
-    cancelBtn = document.createElement('button');
-    cancelBtn.id = 'cancel-edit-btn';
-    cancelBtn.type = 'button';
-    cancelBtn.className = 'cancel-btn';
-    cancelBtn.textContent = 'Cancel Edit';
-    cancelBtn.style.marginLeft = '10px';
-    cancelBtn.onclick = cancelEdit;
-    submitBtn.parentNode.appendChild(cancelBtn);
-  }
 }
 
 export function cancelEdit() {
   state.editingId = null;
-  document.getElementById('item-form').reset();
   
+  // Hide the form container
+  const itemFormContainer = document.getElementById('item-form-container');
+  if (itemFormContainer) {
+    itemFormContainer.style.display = 'none';
+  }
+  
+  // Reset the first row
+  const firstRow = document.querySelector('.item-row[data-row-id="0"]');
+  if (firstRow) {
+    const nameInput = firstRow.querySelector('[name="itemName"]');
+    const priceInput = firstRow.querySelector('[name="itemPrice"]');
+    const categorySelect = firstRow.querySelector('[name="category"]');
+
+    if (nameInput) nameInput.value = '';
+    if (priceInput) priceInput.value = '';
+    if (categorySelect) categorySelect.selectedIndex = 0;
+  }
+  
+  // Reset button text
   const submitBtn = document.querySelector('#item-form button[type="submit"]');
-  if (submitBtn) submitBtn.textContent = 'Add Item';
-  
-  const cancelBtn = document.getElementById('cancel-edit-btn');
-  if (cancelBtn) cancelBtn.remove();
+  if (submitBtn) submitBtn.textContent = 'Add All Items';
 }

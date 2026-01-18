@@ -2,8 +2,11 @@ export function initNavigation() {
   const inputPanel = document.getElementById('input-panel');
   const inventoryPanel = document.getElementById('inventory-panel');
   const billsPanel = document.getElementById('bills-panel');
+  const analysisPanel = document.getElementById('analysis-panel');
   const showBillsBtns = document.querySelectorAll('.bills-btn');
+  const showAnalysisBtn = document.getElementById('show-analysis');
   const backToInventoryBtn = document.getElementById('back-to-inventory');
+  const backFromAnalysisBtn = document.getElementById('back-to-inventory-from-analysis');
   
   const inventorySync = document.getElementById('inventory-sync-controls');
   const billsSync = document.getElementById('bills-sync-controls');
@@ -26,15 +29,42 @@ export function initNavigation() {
       inputPanel.style.display = 'none';
       inventoryPanel.style.display = 'none';
       billsPanel.style.display = 'block';
+      if (analysisPanel) analysisPanel.style.display = 'none';
       toggleSync('bills');
     });
   });
+  
+  if (showAnalysisBtn) {
+    showAnalysisBtn.addEventListener('click', () => {
+      inputPanel.style.display = 'none';
+      inventoryPanel.style.display = 'none';
+      billsPanel.style.display = 'none';
+      if (analysisPanel) {
+        analysisPanel.style.display = 'block';
+        // Trigger render when showing analysis
+        const event = new Event('analysis-shown');
+        document.dispatchEvent(event);
+      }
+      toggleSync('inventory');
+    });
+  }
 
   if (backToInventoryBtn) {
     backToInventoryBtn.addEventListener('click', () => {
       inputPanel.style.display = 'block';
       inventoryPanel.style.display = 'block';
       billsPanel.style.display = 'none';
+      if (analysisPanel) analysisPanel.style.display = 'none';
+      toggleSync('inventory');
+    });
+  }
+  
+  if (backFromAnalysisBtn) {
+    backFromAnalysisBtn.addEventListener('click', () => {
+      inputPanel.style.display = 'block';
+      inventoryPanel.style.display = 'block';
+      billsPanel.style.display = 'none';
+      if (analysisPanel) analysisPanel.style.display = 'none';
       toggleSync('inventory');
     });
   }
@@ -68,6 +98,18 @@ export function initModals() {
   wireTrigger('import-json-trigger', 'json-import');
   wireTrigger('mobile-import-csv-trigger', 'mobile-csv-import');
   wireTrigger('mobile-import-json-trigger', 'mobile-json-import');
+  
+  // Toggle Data Management section
+  const toggleDataMgmtBtn = document.getElementById('toggle-data-management');
+  const dataMgmtSection = document.getElementById('data-management-section');
+  
+  if (toggleDataMgmtBtn && dataMgmtSection) {
+    toggleDataMgmtBtn.addEventListener('click', () => {
+      const isHidden = dataMgmtSection.style.display === 'none';
+      dataMgmtSection.style.display = isHidden ? 'block' : 'none';
+      toggleDataMgmtBtn.textContent = isHidden ? '📊 Hide Data Management' : '📊 Import/Export Data';
+    });
+  }
 }
 
 export function initBillsFormUI() {
@@ -84,6 +126,30 @@ export function initBillsFormUI() {
     if (cancelBillBtn && billFormContainer) {
         cancelBillBtn.addEventListener('click', () => {
             billFormContainer.style.display = 'none';
+        });
+    }
+}
+
+export function initItemFormUI() {
+    const addNewItemBtn = document.getElementById('add-new-item');
+    const cancelItemBtn = document.getElementById('cancel-item-btn');
+    const itemFormContainer = document.getElementById('item-form-container');
+
+    if (addNewItemBtn && itemFormContainer) {
+        addNewItemBtn.addEventListener('click', () => {
+            itemFormContainer.style.display = 'block';
+        });
+    }
+
+    if (cancelItemBtn && itemFormContainer) {
+        cancelItemBtn.addEventListener('click', () => {
+            itemFormContainer.style.display = 'none';
+            // Clear form when canceling
+            const itemForm = document.getElementById('item-form');
+            if (itemForm) {
+                const clearAllRows = require('./bulk-entry.ui.js').clearAllRows;
+                if (clearAllRows) clearAllRows();
+            }
         });
     }
 }

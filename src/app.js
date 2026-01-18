@@ -7,7 +7,9 @@ import { addBill, deleteBill, updateBill, getLastBillPrice } from './features/bi
 
 import { renderInventory, cancelEdit, initInventoryUI } from './ui/inventory.ui.js';
 import { renderBills, cancelEditBill, initBillsUI } from './ui/bills.ui.js';
-import { initNavigation, initModals, initBillsFormUI } from './ui/navigation.ui.js';
+import { initNavigation, initModals, initBillsFormUI, initItemFormUI } from './ui/navigation.ui.js';
+import { initBulkEntryUI, getAllItemsData, clearAllRows, initBulkBillEntryUI, getAllBillsData, clearAllBillRows } from './ui/bulk-entry.ui.js';
+import { renderAnalysis, initAnalysisUI } from './ui/analysis.ui.js';
 
 import {
   syncInventory,
@@ -44,28 +46,49 @@ document.addEventListener('DOMContentLoaded', () => {
   initNavigation();
   initModals();
   initBillsFormUI();
+  initItemFormUI();
   initInventoryUI(); // Wired up logic for Search, Sort, Edit, Delete
   initBillsUI(); // Wired up logic for Bills Edit/Delete
+  initBulkEntryUI(); // Wired up logic for bulk item entry
+  initBulkBillEntryUI(); // Wired up logic for bulk bill entry
+  initAnalysisUI(); // Wired up logic for purchase analysis
+  
+  // Render analysis when panel is shown
+  document.addEventListener('analysis-shown', () => {
+    renderAnalysis();
+  });
 
   /* INVENTORY */
   if (itemForm) {
       itemForm.addEventListener('submit', e => {
         e.preventDefault();
         
-        const itemData = {
-          name: itemName.value,
-          price: +itemPrice.value,
-          category: category.value
-        };
-
+        // Check if we're in edit mode (edit uses old single-field approach)
         if (state.editingId) {
-          // Update existing item
+          // Edit mode - use old single item approach
+          const itemData = {
+            name: document.querySelector('[name="itemName"]')?.value,
+            price: +document.querySelector('[name="itemPrice"]')?.value,
+            category: document.querySelector('[name="category"]')?.value
+          };
           updateItem(state.editingId, itemData);
-          cancelEdit(); // Reset form and mode
+          cancelEdit();
         } else {
-          // Add new item
-          addItem(itemData);
-          itemForm.reset();
+          // Add mode - use bulk entry
+          const items = getAllItemsData();
+          
+          if (items.length === 0) {
+            alert('Please fill in at least one complete item');
+            return;
+          }
+          
+          // Add all items
+          items.forEach(itemData => {
+            addItem(itemData);
+          });
+          
+          // Clear all rows
+          clearAllRows();
         }
         
         renderInventory();
@@ -94,19 +117,35 @@ document.addEventListener('DOMContentLoaded', () => {
   billForm?.addEventListener('submit', e => {
     e.preventDefault();
     
-    const billData = {
-      date: billDate.value,
-      itemName: billItem.value,
-      quantity: +billQuantity.value,
-      purchasePrice: +billPurchasePrice.value
-    };
-
+    // Check if we're in edit mode
     if (state.editingBillId) {
-       updateBill(state.editingBillId, billData);
-       cancelEditBill();
+      // Edit mode - handle single bill update
+      const billData = {
+        date: document.getElementById('bill-date')?.value,
+        itemName: document.querySelector('[name="billItem"]')?.value,
+        quantity: +document.querySelector('[name="billQuantity"]')?.value,
+        purchasePrice: +document.querySelector('[name="billPurchasePrice"]')?.value
+      };
+      updateBill(state.editingBillId, billData);
+      cancelEditBill();
     } else {
-       addBill(billData);
-       billForm.reset();
+      // Add mode - use bulk entry
+      const bills = getAllBillsData();
+      
+      if (bills.length === 0) {
+        alert('Please select a date and fill in at least one item');
+        return;
+      }
+      
+      // Add all bills
+      bills.forEach(billData => {
+        addBill(billData);
+      });
+      
+      // Clear date and all rows
+      const dateInput = document.getElementById('bill-date');
+      if (dateInput) dateInput.value = '';
+      clearAllBillRows();
     }
     
     renderBills();

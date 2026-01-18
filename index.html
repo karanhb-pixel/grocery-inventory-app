@@ -30,30 +30,40 @@
         
         <div id="input-panel">
             <div class="input-header">
-                <h2>Add New Item</h2>
-                <button id="show-bills-main" class="bills-btn main-bills-btn">
-                    📄 View Bills
-                </button>
+                <h2>Inventory Items</h2>
+                <button id="add-new-item" class="add-item-btn">➕ Add New Item</button>
             </div>
-            <form id="item-form">
-                <input type="text" id="itemName" placeholder="Item Name" required>
-                <input type="number" id="itemPrice" placeholder="Price" required step="0.01">
-                <select id="category" required>
-                    <option value="" disabled selected>Select Category</option>
-                    <option value="Staple Foods">Staple Foods</option>
-                    <option value="Pulses/Dal">Pulses/Dal</option>
-                    <option value="Sweeteners/Salt">Sweeteners/Salt</option>
-                    <option value="Spices & Condiments">Spices & Condiments</option>
-                    <option value="Oils & Ghee">Oils & Ghee</option>
-                    <option value="Dairy & Related">Dairy & Related</option>
-                    <option value="Packaged Foods">Packaged Foods</option>
-                    <option value="Beverages">Beverages</option>
-                    <option value="Household & Personal Care">Household & Personal Care</option>
-                    <option value="Miscellaneous">Miscellaneous</option>
-                    <option value="Other">Other</option>
-                </select>
-                <button type="submit">Add Item</button>
-            </form>
+            
+            <div id="item-form-container" style="display: none;">
+                <form id="item-form">
+                    <div id="item-rows-container">
+                        <div class="item-row" data-row-id="0">
+                            <input type="text" name="itemName" placeholder="Item Name" required>
+                            <input type="number" name="itemPrice" placeholder="Price" required step="0.01">
+                            <select name="category" required>
+                                <option value="" disabled selected>Select Category</option>
+                                <option value="Staple Foods">Staple Foods</option>
+                                <option value="Pulses/Dal">Pulses/Dal</option>
+                                <option value="Sweeteners/Salt">Sweeteners/Salt</option>
+                                <option value="Spices & Condiments">Spices & Condiments</option>
+                                <option value="Oils & Ghee">Oils & Ghee</option>
+                                <option value="Dairy & Related">Dairy & Related</option>
+                                <option value="Packaged Foods">Packaged Foods</option>
+                                <option value="Beverages">Beverages</option>
+                                <option value="Household & Personal Care">Household & Personal Care</option>
+                                <option value="Miscellaneous">Miscellaneous</option>
+                                <option value="Other">Other</option>
+                            </select>
+                            <button type="button" class="remove-row-btn" style="display: none;">✕</button>
+                        </div>
+                    </div>
+                    <div class="form-actions">
+                        <button type="button" id="add-item-row-btn" class="add-row-btn">➕ Add Row</button>
+                        <button type="submit">Add All Items</button>
+                        <button type="button" id="cancel-item-btn" class="cancel-item-btn">Cancel</button>
+                    </div>
+                </form>
+            </div>
         </div>
 
         <hr>
@@ -68,14 +78,16 @@
                 </div>
                 <button id="toggle-sort">Sort by: Name (A-Z)</button>
                 <button id="show-bills" class="bills-btn">📄 View Bills</button>
+                <button id="show-analysis" class="analysis-btn">📊 Purchase Analysis</button>
                 
                 <!-- Desktop Data Management -->
-                <div class="data-management desktop-only">
+                <div class="data-management desktop-only" id="data-management-section" style="display: none;">
                     <h3>Data Management</h3>
                     <div class="import-export-buttons">
-                        <button id="export-csv-btn" class="export-btn">Export to CSV</button>
-                        <button id="export-json-btn" class="export-btn">Export to JSON</button>
-                        
+                        <div class="export-section">
+                            <button id="export-csv-btn" class="export-btn">Export to CSV</button>
+                            <button id="export-json-btn" class="export-btn">Export to JSON</button>
+                        </div>
                         <div class="import-section">
                             <label for="csv-import" class="import-label">Import from CSV:</label>
                             <input type="file" id="csv-import" accept=".csv" style="display: none;">
@@ -91,6 +103,8 @@
                         <button id="clear-data-btn" class="clear-btn">Clear All Data</button>
                     </div>
                 </div>
+                
+                <button id="toggle-data-management" class="data-management-toggle-btn desktop-only">📊 Import/Export Data</button>
                 
                 <!-- Mobile Data Button -->
                 <button id="mobile-data-btn" class="mobile-data-btn mobile-only">
@@ -118,6 +132,42 @@
             <div id="inventory-cards" class="inventory-cards mobile-only"></div>
         </div>
         
+        <!-- Purchase Analysis Section -->
+        <div id="analysis-panel" class="analysis-panel" style="display: none;">
+            <h2>📊 Purchase Analysis</h2>
+            <div class="analysis-controls">
+                <button id="back-to-inventory-from-analysis" class="back-btn">← Back to Inventory</button>
+                
+                <div class="period-selector">
+                    <label for="analysis-period">Time Period:</label>
+                    <select id="analysis-period">
+                        <option value="7">Last 7 Days</option>
+                        <option value="14">Last 14 Days</option>
+                        <option value="30" selected>Last 30 Days</option>
+                        <option value="60">Last 60 Days</option>
+                        <option value="90">Last 90 Days</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div class="table-container">
+                <table id="analysis-table">
+                    <thead>
+                        <tr>
+                            <th>Rank</th>
+                            <th>Item</th>
+                            <th>Purchase Count</th>
+                            <th>Avg Quantity</th>
+                            <th>Avg Price</th>
+                            <th>Last Purchased</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
         <!-- Bills View Section -->
         <div id="bills-panel" class="bills-panel" style="display: none;">
             <h2>📄 Bills Management</h2>
@@ -133,45 +183,33 @@
                     <input type="date" id="bill-filter-date" title="Filter by Date">
                     <button id="clear-bill-filter" class="clear-btn">Clear Filter</button>
                 </div>
-
-                <div class="restock-controls">
-                    <label for="restock-period">Restock Insights:</label>
-                    <select id="restock-period">
-                        <option value="7">7 Days</option>
-                        <option value="14">14 Days</option>
-                        <option value="30">30 Days</option>
-                    </select>
-                </div>
             </div>
             
             <!-- Bills Form -->
             <div id="bill-form-container" class="bill-form-container" style="display: none;">
                 <form id="bill-form" class="bill-form">
-                    <div class="form-row">
+                    <div class="bill-date-row">
                         <label for="bill-date">Date:</label>
                         <input type="date" id="bill-date" required>
                     </div>
-                    <div class="form-row">
-                        <label for="bill-item">Item:</label>
-                        <input type="text" id="bill-item" list="bill-item-options" placeholder="Search or select an item" required autocomplete="off">
-                        <datalist id="bill-item-options">
-                            <!-- Items will be populated from inventory -->
-                        </datalist>
+                    
+                    <div id="bill-rows-container">
+                        <div class="bill-row" data-row-id="0">
+                            <input type="text" name="billItem" list="bill-item-options" placeholder="Item" required autocomplete="off">
+                            <input type="number" name="billQuantity" placeholder="Quantity" required min="1" value="1">
+                            <input type="number" name="billPurchasePrice" placeholder="Purchase Price" required step="0.01">
+                            <button type="button" class="remove-bill-row-btn" style="display: none;">✕</button>
+                        </div>
                     </div>
-                    <div class="form-row">
-                        <label for="bill-quantity">Quantity:</label>
-                        <input type="number" id="bill-quantity" placeholder="Quantity" required min="1" value="1">
+                    <datalist id="bill-item-options">
+                        <!-- Items will be populated from inventory -->
+                    </datalist>
+                    
+                    <div class="bill-form-actions">
+                        <button type="button" id="add-bill-row-btn" class="add-row-btn">➕ Add Row</button>
+                        <button type="submit" class="submit-bill-btn">Add All Bills</button>
+                        <button type="button" class="cancel-bill-btn" id="cancel-bill-btn">Cancel</button>
                     </div>
-                    <div class="form-row">
-                        <label for="bill-purchase-price">Purchase Price:</label>
-                        <input type="number" id="bill-purchase-price" placeholder="Purchase Price" required step="0.01">
-                    </div>
-                    <div class="form-row">
-                        <label>Previous Purchase Price:</label>
-                        <span id="previous-purchase-price">₹0.00</span>
-                    </div>
-                    <button type="submit" class="submit-bill-btn">Add to Bill</button>
-                    <button type="button" class="cancel-bill-btn" id="cancel-bill-btn">Cancel</button>
                 </form>
             </div>
             
@@ -191,14 +229,6 @@
                         <!-- Bills will be displayed here -->
                     </tbody>
                 </table>
-            </div>
-
-            <!-- Restock Insights Section -->
-            <div id="restock-insights" class="restock-insights">
-                <h3>🔄 Restock Insights</h3>
-                <div id="insights-list" class="insights-list">
-                    <!-- Insights will be displayed here -->
-                </div>
             </div>
         </div>
     </div>
