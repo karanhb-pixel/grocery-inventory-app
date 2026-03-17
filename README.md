@@ -1,52 +1,59 @@
 # Grocery Inventory Tracker
 
-This is the final source code for the single-page inventory management application integrated with Google Sheets.
+This is the final source code for the single-page inventory management application with cloud synchronization.
 
 ## Project Summary
 
-* **Front-End:** HTML, CSS, JavaScript (Vanilla JS).
-* **Back-End/Database:** Direct connection to the Google Sheet provided by the client.
-* **Features:** Add, View (Sort by Name/Category), Inline Edit, and Remove.
-* **Data Fields:** ID, ITEM_NAME, PRICE, PURCHASE_PRICE, CATEGORY, STATUS.
+- **Front-End:** HTML, CSS, JavaScript (Vanilla JS).
+- **Back-End/Database:**
+  - **JSONBin.io:** Cloud synchronization for multi-device data persistence.
+- **Features:**
+  - **Inventory Management:** Add, View, Inline Edit (Desktop), Card View (Mobile).
+  - **Bulk Entry:** Fast addition of multiple inventory items and purchase bills.
+  - **Purchase Analysis:** Track item purchase frequency and price history over 7, 30, and 90 days.
+  - **Real-time Sync:** Status indicators for cloud operations (Success, Error, Loading).
+- **Data Fields:** ID, ITEM_NAME, PRICE, PURCHASE_PRICE, CATEGORY, STATUS.
 
 ## 🚀 Deployment and Setup Guide
 
 **The application will NOT work until you complete these steps to configure the API key.**
 
-### Step 1: Google Sheet Preparation (Completed)
+### Step 1: Choose Your Deployment Method
 
-Ensure your sheet is accessible and has the required headers in the first row:
-`ID`, `ITEM_NAME`, `PRICE`, `PURCHASE_PRICE`, `CATEGORY`, `STATUS`.
+You must choose a method to securely connect the web app (frontend JavaScript) to a cloud storage provider:
 
-* **Your Sheet ID:** 1d8bG3SMD6RwJJdrXs70faPyWB6Y1w6TN1jO-oClHdyA
-* **Target Sheet Name:** Sheet1 (Assumed)
+#### Option A: JSONBin.io Integration (Recommended for Cloud Sync)
 
-### Step 2: Choose Your Deployment Method
+1.  **Create Account:** Sign up at [JSONBin.io](https://jsonbin.io/).
+2.  **Generate API Key:** Get your Secret Key from the dashboard.
+3.  **Setup Bins:** Create two private bins (one for Inventory, one for Bills).
+4.  **Reference Guide:** See [JSONBIN_SETUP.md](./JSONBIN_SETUP.md) for detailed instructions.
+5.  **Reference Guide:** See [JSONBIN_SETUP.md](./JSONBIN_SETUP.md) for detailed instructions.
 
-You must choose a method to securely connect the web app (frontend JavaScript) to the Google Sheet:
-
-#### Option A: Google Apps Script (Recommended for Simple Apps)
-
-1.  **Open Google Apps Script:** In your Google Sheet, go to **Extensions** > **Apps Script**.
-2.  **Deploy as Web App:** Write a simple script (called a 'serverless backend') that acts as a secure intermediary between your `app.js` and the sheet data. You deploy this script as a 'Web App' to get a unique URL.
-3.  **Get the API Endpoint:** The deployed URL is your secure **`API_URL`**.
-
-### Step 3: Apps Script (Code) Included
-
-This repository already includes a reference `Code.gs` file that you can copy into the Google Apps Script editor. It exposes a simple JSON HTTP API and includes CORS headers and an `OPTIONS` handler to support browser fetch requests. The file is located at `Code.gs` in this repo.
-
-Make sure when you deploy the Apps Script as a Web App you create a new deployment version after any server-side edits so the latest code is used.
+- Update `JSONBIN_CONFIG` in `src/services/jsonbin.service.js` with your API Key and Bin IDs.
 
 #### Option B: Dedicated API Service (Advanced)
 
-Use a dedicated server (like Node.js, Python, or a service like Sheety/SheetDB) to host a secure API layer that handles the authentication and read/write requests to the Google Sheets API.
+Use a dedicated server (like Node.js/Express, Python Flask/FastAPI, or serverless functions) to host a secure API layer.
+If using Option B (Dedicated API Service):
 
-### Step 3: Update `app.js` Configuration
+- Update `API_URL` in `app.js` with your custom API endpoint
+- Configure any required authentication keys/headers for your custom service
 
-Once you have secured your API endpoint (the URL from Step 2), you can configure the frontend in one of two ways:
+### 📂 File Structure
 
-- Option 1 (recommended for Netlify): Set a Netlify environment variable named `API_URL` to your Apps Script `/exec` URL and deploy the site. The included Netlify Function `netlify/functions/sheets.js` will forward requests to Apps Script and add proper CORS headers. The function reads the target URL from the Netlify environment as `API_URL`.
-- Option 2 (simple/test): Edit `app.js` directly and update the `API_URL` constant at the top of the file. Note: direct browser calls to Apps Script can be blocked by CORS unless your Apps Script deployment returns CORS headers (the `Code.gs` provided includes these headers).
+```
+grocery-inventory-app/
+├── index.html          # Main application UI
+├── style.css           # Modern, responsive styling
+├── app.js              # Main application entry point
+├── JSONBIN_SETUP.md    # Guide for JSONBin.io configuration
+├── src/                # Modular source code
+│   ├── core/           # State, Storage, and Constants
+│   ├── features/       # Inventory, Bills, and Analysis logic
+│   ├── services/       # Cloud API services (JSONBin)
+│   └── ui/             # Component-specific UI logic
+```
 
 If you choose to edit `app.js` directly, replace the placeholder variables at the top:
 
@@ -55,8 +62,7 @@ If you choose to edit `app.js` directly, replace the placeholder variables at th
 // 1. Configuration (MUST BE UPDATED ACCORDING TO README.MD INSTRUCTIONS)
 // ==============================================================================
 
-const API_URL = 'YOUR_SECURE_APPS_SCRIPT_OR_API_ENDPOINT_HERE'; 
-const SPREADSHEET_ID = '1d8bG3SMD6RwJJdrXs70faPyWB6Y1w6TN1jO-oClHdyA'; // Your sheet ID
-const SHEET_NAME = 'Sheet1'; // Assuming default sheet name
+const API_URL = "YOUR_SECURE_API_ENDPOINT_HERE";
 
 // ... rest of the code ...
+```

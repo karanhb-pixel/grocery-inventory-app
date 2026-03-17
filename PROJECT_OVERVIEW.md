@@ -26,18 +26,25 @@ This is a comprehensive single-page web application for managing grocery invento
   - Other
 
 ### 📄 Bills Management
-- **Purchase Tracking**: Record purchase bills with date, item, quantity, and purchase price
-- **Price Updates**: Automatically update item purchase prices when new bills are added
-- **Bill History**: View all purchase bills sorted by date (newest first)
-- **Bill Deletion**: Remove bills with confirmation
-- **Price Comparison**: Display previous vs. current purchase prices
+- **Purchase Tracking**: Record purchase bills with date, item, quantity, and purchase price.
+- **Bulk Bill Entry**: Add multiple items to a single bill with a shared date through a grid interface.
+- **Price Updates**: Automatically update item purchase prices when new bills are added.
+- **Bill History**: View all purchase bills sorted by date (newest first).
+- **Price Comparison**: Display previous vs. current purchase prices to track inflation or vendor changes.
 
-### ☁️ Cloud Synchronization
-- **JSONBin.io Integration**: Free cloud storage for data persistence
-- **Dual Bin System**: Separate bins for inventory and bills data
-- **Auto-Sync**: Automatic synchronization after data changes (debounced)
-- **Manual Sync**: Manual sync/load buttons for both inventory and bills
-- **Status Indicators**: Real-time sync status with loading, success, and error states
+### ➕ Bulk Entry System
+- **Quick Addition**: Add multiple inventory items at once using a spreadsheet-like grid.
+- **Efficient Workflow**: Features like `getAllItemsData()` and `clearAllRows()` to manage bulk data before submission.
+
+### 📊 Purchase Analysis
+- **Frequency Analysis**: Calculate how often items are purchased over different time periods (7, 30, 90 days).
+- **Spending Insights**: View average quantity, price, and last purchase date for each item.
+- **Responsive Tables**: Detailed analysis data rendered via `analysis.ui.js`.
+
+### ☁️ Cloud Synchronization & Integration
+- **JSONBin.io Integration**: Primary cloud storage for robust synchronization.
+- **Manual & Auto-Sync**: Debounced auto-sync after changes, with manual override buttons.
+- **Status Indicators**: Visual feedback (Success, Error, Loading) provided by the `Status UI` component.
 
 ### 📊 Data Management
 - **Export Options**: Export data to CSV or JSON formats
@@ -48,15 +55,15 @@ This is a comprehensive single-page web application for managing grocery invento
 
 ## Technical Architecture
 
-### Frontend Stack
-- **HTML5**: Semantic markup with accessibility considerations
-- **CSS3**: Modern styling with CSS variables for theming
-- **JavaScript (ES6+)**: Vanilla JS with modern features
-- **Responsive Design**: Mobile-first approach with breakpoints
+### Technical Stack
+- **Languages**: HTML5, CSS3, Vanilla JavaScript (ES6+).
+- **Back-End**: JSONBin.io (mBaaS) or custom REST API.
+- **Storage**: `localStorage` (Local Cache) + Cloud Database (Persistence).
+- **Architecture**: Modular Component-based structure in `src/`.
 
-### Data Storage
-- **localStorage**: Primary data persistence
-- **JSONBin.io API**: Cloud backup and synchronization
+### Data Storage & Operations
+- **localStorage**: Primary high-speed data persistence.
+- **Cloud APIs**: Asynchronous synchronization with JSONBin.
 - **Data Structure**:
   ```javascript
   // Inventory Item
@@ -85,38 +92,38 @@ This is a comprehensive single-page web application for managing grocery invento
 
 ### Key Components
 
-#### 1. UI Components (`index.html`)
-- **Input Panel**: Form for adding new items
-- **Inventory Panel**: Table view (desktop) and card view (mobile)
-- **Bills Panel**: Bills management interface
-- **Data Management**: Import/export controls
-- **Cloud Sync**: JSONBin.io synchronization controls
-- **Mobile Modal**: Responsive data management modal
+#### 1. Core Logic (`src/core/`)
+- **`state.js`**: Centralized application state management.
+- **`storage.js`**: Wrappers for `localStorage` and data persistence logic.
+- **`constants.js`**: Global configuration constants and storage keys.
 
-#### 2. Styling (`style.css`)
-- **CSS Variables**: Dynamic theming support (light/dark themes)
-- **Responsive Grid**: Flexible layouts for all screen sizes
-- **Modern Design**: Gradient buttons, shadows, animations
-- **Mobile Optimizations**: Touch-friendly interactions
-- **Accessibility**: Focus states and semantic markup
+#### 2. Features (`src/features/`)
+- **`inventory.features.js`**: Core inventory logic (add, edit, delete, filter).
+- **`bills.features.js`**: Purchase tracking and price update algorithms.
+- **`analysis.features.js`**: Frequency calculation and period-based data processing.
 
-#### 3. Functionality (`app.js`)
-- **State Management**: Global state for inventory and bills data
-- **CRUD Operations**: Complete create, read, update, delete functionality
-- **Search & Sort**: Real-time filtering and sorting algorithms
-- **Data Persistence**: localStorage and cloud sync integration
-- **Event Handling**: Comprehensive event listeners and handlers
-- **API Integration**: JSONBin.io REST API calls
+#### 3. Services (`src/services/`)
+- **`jsonbin.service.js`**: API integration for cloud synchronization.
 
-## File Structure
+#### 4. UI Components (`src/ui/`)
+- **`inventory.ui.js` / `bills.ui.js`**: Main module-specific rendering.
+- **`bulk-entry.ui.js`**: Grid-based interface for rapid data entry.
+- **`analysis.ui.js`**: Rendering for the purchase analysis dashboard.
+- **`status.ui.js`**: Global sync status indicator component.
+- **`navigation.ui.js`**: Tab switching and responsive menu logic.
+
+### File Structure
 
 ```
 grocery-inventory-app/
-├── index.html          # Main HTML structure
-├── style.css           # Complete styling and themes
-├── app.js             # Application logic and functionality
-├── package.json       # Project metadata and dependencies
-└── PROJECT_OVERVIEW.md # This documentation file
+├── index.html          # HTML entry point
+├── style.css           # Global design system
+├── app.js              # Application bootstrapper
+├── src/
+│   ├── core/           # Infrastructure and state
+│   ├── features/       # Business logic
+│   ├── services/       # External integrations
+│   └── ui/             # View components
 ```
 
 ## API Integration
