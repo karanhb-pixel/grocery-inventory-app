@@ -1,271 +1,434 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Grocery Inventory Tracker</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="style.css">
-    <link rel="icon" href="data:,">
-</head>
-<body>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="style.css" />
+    <link rel="icon" href="data:," />
+    <script type="importmap">
+      {
+        "imports": {
+          "gsap": "https://cdn.jsdelivr.net/npm/gsap@3.12.5/+esm"
+        }
+      }
+    </script>
+    <link rel="manifest" href="manifest.json" />
+    <meta name="theme-color" content="#6366f1" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  </head>
+  <body>
+    <div class="bg-glow-1"></div>
+    <div class="bg-glow-2"></div>
     <div class="container">
-        <h1>🛒 Inventory Management System</h1>
-        
-        <!-- Cloud Storage Sync Section -->
-        <div id="sheets-sync-section" class="sheets-sync-section">
-            <div class="sync-group">
-                <span id="jsonbin-status" class="jsonbin-status"></span>
-                <h4 id="sync-header">Inventory Cloud Sync</h4>
-                <button id="sync-to-jsonbin" class="sync-btn sync-to-jsonbin">
-                    📤 Sync to JSONBin
-                </button>
-                <button id="load-from-jsonbin" class="sync-btn load-from-jsonbin">
-                    📥 Load from JSONBin
-                </button>
-            </div>
+      <h1>🛒 Inventory Management System</h1>
+
+      <!-- Cloud Storage Sync Section -->
+      <div id="sheets-sync-section" class="sheets-sync-section">
+        <div class="sync-group">
+          <span id="jsonbin-status" class="jsonbin-status"></span>
+          <h4 id="sync-header">Inventory Cloud Sync</h4>
+          <button id="sync-to-jsonbin" class="sync-btn sync-to-jsonbin">
+            📤 Sync to JSONBin
+          </button>
+          <button id="load-from-jsonbin" class="sync-btn load-from-jsonbin">
+            📥 Load from JSONBin
+          </button>
         </div>
-        
-        <div id="input-panel">
-            <div class="input-header">
-                <h2>Inventory Items</h2>
-                <button id="add-new-item" class="add-item-btn">➕ Add New Item</button>
-            </div>
-            
-            <div id="item-form-container" style="display: none;">
-                <form id="item-form">
-                    <div id="item-rows-container">
-                        <div class="item-row" data-row-id="0">
-                            <input type="text" name="itemName" placeholder="Item Name" required>
-                            <input type="number" name="itemPrice" placeholder="Price" required step="0.01">
-                            <select name="category" required>
-                                <option value="" disabled selected>Select Category</option>
-                                <option value="Staple Foods">Staple Foods</option>
-                                <option value="Pulses/Dal">Pulses/Dal</option>
-                                <option value="Sweeteners/Salt">Sweeteners/Salt</option>
-                                <option value="Spices & Condiments">Spices & Condiments</option>
-                                <option value="Oils & Ghee">Oils & Ghee</option>
-                                <option value="Dairy & Related">Dairy & Related</option>
-                                <option value="Packaged Foods">Packaged Foods</option>
-                                <option value="Beverages">Beverages</option>
-                                <option value="Household & Personal Care">Household & Personal Care</option>
-                                <option value="Miscellaneous">Miscellaneous</option>
-                                <option value="Other">Other</option>
-                            </select>
-                            <button type="button" class="remove-row-btn" style="display: none;">✕</button>
-                        </div>
-                    </div>
-                    <div class="form-actions">
-                        <button type="button" id="add-item-row-btn" class="add-row-btn">➕ Add Row</button>
-                        <button type="submit">Add All Items</button>
-                        <button type="button" id="cancel-item-btn" class="cancel-item-btn">Cancel</button>
-                    </div>
-                </form>
-            </div>
+      </div>
+
+      <div id="input-panel">
+        <div class="input-header">
+          <h2>Inventory Items</h2>
+          <button id="add-new-item" class="add-item-btn">
+            ➕ Add New Item
+          </button>
         </div>
 
-        <hr>
-
-        <div id="inventory-panel">
-            <h2>Current Stock List</h2>
-            <div class="controls">
-                <p>Total Items: <span id="item-count">0</span></p>
-                <div class="search-container">
-                    <input type="text" id="search-input" placeholder="🔍 Search items by name or category..." />
-                    <button id="clear-search" class="clear-search-btn" style="display: none;">✕</button>
-                </div>
-                <button id="toggle-sort">Sort by: Name (A-Z)</button>
-                <button id="show-bills" class="bills-btn">📄 View Bills</button>
-                <button id="show-analysis" class="analysis-btn">📊 Purchase Analysis</button>
-                
-                <!-- Desktop Data Management -->
-                <div class="data-management desktop-only" id="data-management-section" style="display: none;">
-                    <h3>Data Management</h3>
-                    <div class="import-export-buttons">
-                        <div class="export-section">
-                            <button id="export-csv-btn" class="export-btn">Export to CSV</button>
-                            <button id="export-json-btn" class="export-btn">Export to JSON</button>
-                        </div>
-                        <div class="import-section">
-                            <label for="csv-import" class="import-label">Import from CSV:</label>
-                            <input type="file" id="csv-import" accept=".csv" style="display: none;">
-                            <button id="import-csv-trigger" class="import-btn">Choose CSV File</button>
-                        </div>
-                        
-                        <div class="import-section">
-                            <label for="json-import" class="import-label">Import from JSON:</label>
-                            <input type="file" id="json-import" accept=".json" style="display: none;">
-                            <button id="import-json-trigger" class="import-btn">Choose JSON File</button>
-                        </div>
-                        
-                        <button id="clear-data-btn" class="clear-btn">Clear All Data</button>
-                    </div>
-                </div>
-                
-                <button id="toggle-data-management" class="data-management-toggle-btn desktop-only">📊 Import/Export Data</button>
-                
-                <!-- Mobile Data Button -->
-                <button id="mobile-data-btn" class="mobile-data-btn mobile-only">
-                    📊 Data
+        <div id="item-form-container" style="display: none">
+          <form id="item-form">
+            <div id="item-rows-container">
+              <div class="item-row" data-row-id="0">
+                <input
+                  type="text"
+                  name="itemName"
+                  placeholder="Item Name"
+                  required
+                />
+                <input
+                  type="number"
+                  name="itemPrice"
+                  placeholder="Price"
+                  required
+                  step="0.01"
+                />
+                <select name="category" required>
+                  <option value="" disabled selected>Select Category</option>
+                  <option value="Staple Foods">Staple Foods</option>
+                  <option value="Pulses/Dal">Pulses/Dal</option>
+                  <option value="Sweeteners/Salt">Sweeteners/Salt</option>
+                  <option value="Spices & Condiments">
+                    Spices & Condiments
+                  </option>
+                  <option value="Oils & Ghee">Oils & Ghee</option>
+                  <option value="Dairy & Related">Dairy & Related</option>
+                  <option value="Packaged Foods">Packaged Foods</option>
+                  <option value="Beverages">Beverages</option>
+                  <option value="Household & Personal Care">
+                    Household & Personal Care
+                  </option>
+                  <option value="Miscellaneous">Miscellaneous</option>
+                  <option value="Other">Other</option>
+                </select>
+                <button
+                  type="button"
+                  class="remove-row-btn"
+                  style="display: none"
+                >
+                  ✕
                 </button>
+              </div>
             </div>
-            
-            <!-- Desktop Table View -->
-            <div class="table-container desktop-only">
-                <table id="inventory-table">
-                    <thead>
-                        <tr>
-                            <th>Item Name</th>
-                            <th>Price</th>
-                            <th>Category</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                    </tbody>
-                </table>
+            <div class="form-actions">
+              <button type="button" id="add-item-row-btn" class="add-row-btn">
+                ➕ Add Row
+              </button>
+              <button type="submit">Add All Items</button>
+              <button
+                type="button"
+                id="cancel-item-btn"
+                class="cancel-item-btn"
+              >
+                Cancel
+              </button>
             </div>
-            
-            <!-- Mobile Card View -->
-            <div id="inventory-cards" class="inventory-cards mobile-only"></div>
+          </form>
         </div>
-        
-        <!-- Purchase Analysis Section -->
-        <div id="analysis-panel" class="analysis-panel" style="display: none;">
-            <h2>📊 Purchase Analysis</h2>
-            <div class="analysis-controls">
-                <button id="back-to-inventory-from-analysis" class="back-btn">← Back to Inventory</button>
-                
-                <div class="period-selector">
-                    <label for="analysis-period">Time Period:</label>
-                    <select id="analysis-period">
-                        <option value="7">Last 7 Days</option>
-                        <option value="14">Last 14 Days</option>
-                        <option value="30" selected>Last 30 Days</option>
-                        <option value="60">Last 60 Days</option>
-                        <option value="90">Last 90 Days</option>
-                    </select>
-                </div>
-            </div>
-            
-            <div class="table-container">
-                <table id="analysis-table">
-                    <thead>
-                        <tr>
-                            <th>Rank</th>
-                            <th>Item</th>
-                            <th>Purchase Count</th>
-                            <th>Avg Quantity</th>
-                            <th>Avg Price</th>
-                            <th>Last Purchased</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                    </tbody>
-                </table>
-            </div>
-        </div>
-        
-        <!-- Bills View Section -->
-        <div id="bills-panel" class="bills-panel" style="display: none;">
-            <h2>📄 Bills Management</h2>
-            <div class="bills-controls">
-                <button id="back-to-inventory" class="back-btn">← Back to Inventory</button>
-                <button id="add-new-bill" class="add-bill-btn">➕ Add New Bill</button>
-                
-                <div class="sync-group" style="display: none;">
-                   <!-- Moved to header -->
-                </div>
+      </div>
 
-                <div class="filter-group">
-                    <input type="date" id="bill-filter-date" title="Filter by Date">
-                    <button id="clear-bill-filter" class="clear-btn">Clear Filter</button>
-                </div>
+      <hr />
+
+      <div id="inventory-panel">
+        <h2>Current Stock List</h2>
+        <div class="controls">
+          <p>Total Items: <span id="item-count">0</span></p>
+          <div class="search-container">
+            <input
+              type="text"
+              id="search-input"
+              placeholder="🔍 Search items by name or category..."
+            />
+            <button
+              id="clear-search"
+              class="clear-search-btn"
+              style="display: none"
+            >
+              ✕
+            </button>
+          </div>
+          <button id="toggle-sort">Sort by: Name (A-Z)</button>
+          <button id="show-bills" class="bills-btn">📄 View Bills</button>
+          <button id="show-analysis" class="analysis-btn">
+            📊 Purchase Analysis
+          </button>
+
+          <!-- Desktop Data Management -->
+          <div
+            class="data-management desktop-only"
+            id="data-management-section"
+            style="display: none"
+          >
+            <h3>Data Management</h3>
+            <div class="import-export-buttons">
+              <div class="export-section">
+                <button id="export-csv-btn" class="export-btn">
+                  Export to CSV
+                </button>
+                <button id="export-json-btn" class="export-btn">
+                  Export to JSON
+                </button>
+              </div>
+              <div class="import-section">
+                <label for="csv-import" class="import-label"
+                  >Import from CSV:</label
+                >
+                <input
+                  type="file"
+                  id="csv-import"
+                  accept=".csv"
+                  style="display: none"
+                />
+                <button id="import-csv-trigger" class="import-btn">
+                  Choose CSV File
+                </button>
+              </div>
+
+              <div class="import-section">
+                <label for="json-import" class="import-label"
+                  >Import from JSON:</label
+                >
+                <input
+                  type="file"
+                  id="json-import"
+                  accept=".json"
+                  style="display: none"
+                />
+                <button id="import-json-trigger" class="import-btn">
+                  Choose JSON File
+                </button>
+              </div>
+
+              <button id="clear-data-btn" class="clear-btn">
+                Clear All Data
+              </button>
             </div>
-            
-            <!-- Bills Form -->
-            <div id="bill-form-container" class="bill-form-container" style="display: none;">
-                <form id="bill-form" class="bill-form">
-                    <div class="bill-date-row">
-                        <label for="bill-date">Date:</label>
-                        <input type="date" id="bill-date" required>
-                    </div>
-                    
-                    <div id="bill-rows-container">
-                        <div class="bill-row" data-row-id="0">
-                            <input type="text" name="billItem" list="bill-item-options" placeholder="Item" required autocomplete="off">
-                            <input type="number" name="billQuantity" placeholder="Quantity" required min="1" value="1">
-                            <input type="number" name="billPurchasePrice" placeholder="Purchase Price" required step="0.01">
-                            <button type="button" class="remove-bill-row-btn" style="display: none;">✕</button>
-                        </div>
-                    </div>
-                    <datalist id="bill-item-options">
-                        <!-- Items will be populated from inventory -->
-                    </datalist>
-                    
-                    <div class="bill-form-actions">
-                        <button type="button" id="add-bill-row-btn" class="add-row-btn">➕ Add Row</button>
-                        <button type="submit" class="submit-bill-btn">Add All Bills</button>
-                        <button type="button" class="cancel-bill-btn" id="cancel-bill-btn">Cancel</button>
-                    </div>
-                </form>
-            </div>
-            
-            <!-- Bills List -->
-            <div id="bills-list" class="bills-list">
-                <table id="bills-table">
-                    <thead>
-                        <tr>
-                            <th>Date</th>
-                            <th>Item</th>
-                            <th>Quantity</th>
-                            <th>Purchase Price</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody id="bills-table-body">
-                        <!-- Bills will be displayed here -->
-                    </tbody>
-                </table>
-            </div>
+          </div>
+
+          <button
+            id="toggle-data-management"
+            class="data-management-toggle-btn desktop-only"
+          >
+            📊 Import/Export Data
+          </button>
+
+          <!-- Mobile Data Button -->
+          <button id="mobile-data-btn" class="mobile-data-btn mobile-only">
+            📊 Data
+          </button>
         </div>
+
+        <!-- Desktop Table View -->
+        <div class="table-container desktop-only">
+          <table id="inventory-table">
+            <thead>
+              <tr>
+                <th>Item Name</th>
+                <th>Price</th>
+                <th>Category</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+
+        <!-- Mobile Card View -->
+        <div id="inventory-cards" class="inventory-cards mobile-only"></div>
+      </div>
+
+      <!-- Purchase Analysis Section -->
+      <div id="analysis-panel" class="analysis-panel" style="display: none">
+        <h2>📊 Purchase Analysis</h2>
+        <div class="analysis-controls">
+          <button id="back-to-inventory-from-analysis" class="back-btn">
+            ← Back to Inventory
+          </button>
+
+          <div class="period-selector">
+            <label for="analysis-period">Time Period:</label>
+            <select id="analysis-period">
+              <option value="7">Last 7 Days</option>
+              <option value="14">Last 14 Days</option>
+              <option value="30" selected>Last 30 Days</option>
+              <option value="60">Last 60 Days</option>
+              <option value="90">Last 90 Days</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="table-container">
+          <table id="analysis-table">
+            <thead>
+              <tr>
+                <th>Rank</th>
+                <th>Item</th>
+                <th>Purchase Count</th>
+                <th>Avg Quantity</th>
+                <th>Avg Price</th>
+                <th>Last Purchased</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Bills View Section -->
+      <div id="bills-panel" class="bills-panel" style="display: none">
+        <h2>📄 Bills Management</h2>
+        <div class="bills-controls">
+          <button id="back-to-inventory" class="back-btn">
+            ← Back to Inventory
+          </button>
+          <button id="add-new-bill" class="add-bill-btn">
+            ➕ Add New Bill
+          </button>
+
+          <div class="sync-group" style="display: none">
+            <!-- Moved to header -->
+          </div>
+
+          <div class="filter-group">
+            <input type="date" id="bill-filter-date" title="Filter by Date" />
+            <button id="clear-bill-filter" class="clear-btn">
+              Clear Filter
+            </button>
+          </div>
+        </div>
+
+        <!-- Bills Form -->
+        <div
+          id="bill-form-container"
+          class="bill-form-container"
+          style="display: none"
+        >
+          <form id="bill-form" class="bill-form">
+            <div class="bill-date-row">
+              <label for="bill-date">Date:</label>
+              <input type="date" id="bill-date" required />
+            </div>
+
+            <div id="bill-rows-container">
+              <div class="bill-row" data-row-id="0">
+                <input
+                  type="text"
+                  name="billItem"
+                  list="bill-item-options"
+                  placeholder="Item"
+                  required
+                  autocomplete="off"
+                />
+                <input
+                  type="number"
+                  name="billQuantity"
+                  placeholder="Quantity"
+                  required
+                  min="1"
+                  value="1"
+                />
+                <input
+                  type="number"
+                  name="billPurchasePrice"
+                  placeholder="Purchase Price"
+                  required
+                  step="0.01"
+                />
+                <button
+                  type="button"
+                  class="remove-bill-row-btn"
+                  style="display: none"
+                >
+                  ✕
+                </button>
+              </div>
+            </div>
+            <datalist id="bill-item-options">
+              <!-- Items will be populated from inventory -->
+            </datalist>
+
+            <div class="bill-form-actions">
+              <button type="button" id="add-bill-row-btn" class="add-row-btn">
+                ➕ Add Row
+              </button>
+              <button type="submit" class="submit-bill-btn">
+                Add All Bills
+              </button>
+              <button
+                type="button"
+                class="cancel-bill-btn"
+                id="cancel-bill-btn"
+              >
+                Cancel
+              </button>
+            </div>
+          </form>
+        </div>
+
+        <!-- Bills List -->
+        <div id="bills-list" class="bills-list">
+          <table id="bills-table">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Item</th>
+                <th>Quantity</th>
+                <th>Purchase Price</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="bills-table-body">
+              <!-- Bills will be displayed here -->
+            </tbody>
+          </table>
+          <div id="bill-cards" class="bill-cards mobile-only"></div>
+        </div>
+      </div>
     </div>
 
     <!-- Mobile Data Modal -->
     <div id="data-modal" class="data-modal">
-        <div class="data-modal-content">
-            <div class="data-modal-header">
-                <h3>Data Management</h3>
-                <button class="close-modal">&times;</button>
-            </div>
-            
-            <div class="data-modal-body">
-                <h4>Export Data</h4>
-                <div class="modal-buttons">
-                    <button id="mobile-export-csv" class="export-btn">📄 Export to CSV</button>
-                    <button id="mobile-export-json" class="export-btn">📋 Export to JSON</button>
-                </div>
-                
-                <h4>Import Data</h4>
-                <div class="modal-buttons">
-                    <input type="file" id="mobile-csv-import" accept=".csv" style="display: none;">
-                    <button id="mobile-import-csv-trigger" class="import-btn">📁 Import from CSV</button>
-                    
-                    <input type="file" id="mobile-json-import" accept=".json" style="display: none;">
-                    <button id="mobile-import-json-trigger" class="import-btn">📁 Import from JSON</button>
-                </div>
-                
-                <h4>Data Actions</h4>
-                <div class="modal-buttons">
-                    <button id="mobile-clear-data" class="clear-btn">🗑️ Clear All Data</button>
-                </div>
-            </div>
+      <div class="data-modal-content">
+        <div class="data-modal-header">
+          <h3>Data Management</h3>
+          <button class="close-modal">&times;</button>
         </div>
+
+        <div class="data-modal-body">
+          <h4>Export Data</h4>
+          <div class="modal-buttons">
+            <button id="mobile-export-csv" class="export-btn">
+              📄 Export to CSV
+            </button>
+            <button id="mobile-export-json" class="export-btn">
+              📋 Export to JSON
+            </button>
+          </div>
+
+          <h4>Import Data</h4>
+          <div class="modal-buttons">
+            <input
+              type="file"
+              id="mobile-csv-import"
+              accept=".csv"
+              style="display: none"
+            />
+            <button id="mobile-import-csv-trigger" class="import-btn">
+              📁 Import from CSV
+            </button>
+
+            <input
+              type="file"
+              id="mobile-json-import"
+              accept=".json"
+              style="display: none"
+            />
+            <button id="mobile-import-json-trigger" class="import-btn">
+              📁 Import from JSON
+            </button>
+          </div>
+
+          <h4>Data Actions</h4>
+          <div class="modal-buttons">
+            <button id="mobile-clear-data" class="clear-btn">
+              🗑️ Clear All Data
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
 
-    <script type="module" src="./src/app.js?v=2.0"></script>
+    <!-- Floating Action Button for Mobile -->
+    <button id="mobile-fab" class="mobile-fab mobile-only" title="Add New Item" aria-label="Add new item">
+      <span aria-hidden="true">➕</span>
+    </button>
 
-</body>
+    <script type="module" src="./src/app.js?v=2.0"></script>
+  </body>
 </html>

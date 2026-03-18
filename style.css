@@ -93,11 +93,15 @@ body {
 .container {
     max-width: 1400px;
     margin: 0 auto;
-    background: var(--bg-secondary);
+    background: rgba(255, 255, 255, 0.7);
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    border: 1px solid rgba(255, 255, 255, 0.5);
     border-radius: var(--radius-xl);
-    box-shadow: var(--shadow-xl);
+    box-shadow:
+        0 8px 32px 0 rgba(31, 38, 135, 0.15),
+        inset 0 0 0 1px rgba(255, 255, 255, 0.2);
     overflow: hidden;
-    border: 1px solid var(--border);
 }
 
 /* Header Styles */
@@ -112,6 +116,7 @@ h1 {
     letter-spacing: -0.025em;
     position: relative;
     overflow: hidden;
+    z-index: 1;
 }
 
 h1::before {
@@ -123,6 +128,17 @@ h1::before {
     bottom: 0;
     background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.05'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
     opacity: 0.5;
+}
+
+h1::after {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: radial-gradient(circle, rgba(99, 102, 241, 0.2) 0%, transparent 70%);
+    z-index: -1;
 }
 
 h2 {
@@ -1577,19 +1593,118 @@ h3 {
         max-width: 320px;
     }
 
-    #inventory-table {
-        font-size: 13px;
+    /* Mobile-only layout fixes */
+    .mobile-only {
+        display: block !important;
+    }
+    
+    .desktop-only {
+        display: none !important;
     }
 
-    #inventory-table th,
-    #inventory-table td {
-        padding: 12px 10px;
+    #inventory-table, #bills-table, #analysis-table {
+        display: none; /* Hide tables on small mobile, show cards instead */
     }
 
-    .action-btn {
-        padding: 6px 10px;
-        font-size: 11px;
-        margin: 2px;
+    /* Card View Styling */
+    .inventory-cards, .bill-cards {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+        padding: 4px;
+    }
+
+    .mobile-card {
+        background: rgba(255, 255, 255, 0.4);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        border-radius: var(--radius);
+        padding: 20px;
+        box-shadow: var(--shadow-sm);
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        transition: var(--transition);
+        position: relative;
+    }
+
+    .mobile-card:active {
+        transform: scale(0.98);
+        background: rgba(255, 255, 255, 0.6);
+    }
+
+    .card-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+    }
+
+    .card-title {
+        font-weight: 700;
+        font-size: 1.1rem;
+        color: var(--text-primary);
+    }
+
+    .card-price {
+        font-weight: 700;
+        color: var(--primary);
+        font-size: 1.1rem;
+    }
+
+    .card-meta {
+        font-size: 0.9rem;
+        color: var(--text-secondary);
+        display: flex;
+        gap: 8px;
+        align-items: center;
+    }
+
+    .card-actions {
+        display: flex;
+        gap: 12px;
+        margin-top: 8px;
+    }
+
+    .card-actions button {
+        flex: 1;
+        height: 44px; /* Touch friendly */
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 14px;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+
+    /* Floating Action Button */
+    .mobile-fab {
+        position: fixed;
+        bottom: 30px;
+        right: 30px;
+        width: 60px;
+        height: 60px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+        color: white;
+        border: none;
+        box-shadow: var(--shadow-lg);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 24px;
+        cursor: pointer;
+        z-index: 1000;
+        transition: var(--transition);
+    }
+
+    .mobile-fab:hover {
+        transform: scale(1.1) rotate(90deg);
+        box-shadow: 0 12px 24px rgba(99, 102, 241, 0.4);
+    }
+
+    .mobile-fab:active {
+        transform: scale(0.9);
     }
 }
 
@@ -1608,29 +1723,30 @@ h3 {
         padding: 16px;
     }
 
-    #input-panel form {
-        grid-template-columns: 1fr;
+    /* Stack the row inputs vertically on small phones */
+    .item-row, .bill-row {
+        display: flex;
+        flex-direction: column;
         gap: 10px;
+        padding: 16px;
+    }
+
+    .item-row input, .item-row select,
+    .bill-row input {
+        width: 100%;
+        font-size: 16px !important; /* Prevent iOS zoom */
+    }
+
+    .remove-row-btn, .remove-bill-row-btn {
+        align-self: flex-end;
+        padding: 12px 20px;
+        width: auto;
     }
 
     #input-panel button {
-        grid-column: span 1;
-    }
-
-    #inventory-table th,
-    #inventory-table td {
-        padding: 10px 8px;
-        font-size: 12px;
-    }
-
-    .action-btn {
-        padding: 6px 8px;
-        font-size: 10px;
-    }
-
-    .sync-btn {
+        grid-column: span 2;
         width: 100%;
-        min-width: auto;
+        height: 48px;
     }
 }
 
@@ -2005,4 +2121,28 @@ hr {
         padding: 12px 10px;
         font-size: 12px;
     }
+}
+
+/* Background Glow Effects for Glassmorphism */
+.bg-glow-1,
+.bg-glow-2 {
+    position: fixed;
+    width: 600px;
+    height: 600px;
+    filter: blur(100px);
+    z-index: -1;
+    opacity: 0.4;
+    border-radius: 50%;
+}
+
+.bg-glow-1 {
+    top: -10%;
+    left: -10%;
+    background: var(--primary);
+}
+
+.bg-glow-2 {
+    bottom: -10%;
+    right: -10%;
+    background: var(--accent);
 }

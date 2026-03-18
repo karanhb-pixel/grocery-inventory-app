@@ -4,7 +4,8 @@
   "description": "This is the final source code for the single-page inventory management application integrated with Google Sheets.",
   "main": "app.js",
   "dependencies": {
-    "dotenv": "^17.2.3"
+    "dotenv": "^16.4.5",
+    "gsap": "^3.12.5"
   },
   "devDependencies": {
     "http-server": "^14.1.1"
@@ -21,7 +22,7 @@
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "type": "commonjs",
+  "type": "module",
   "bugs": {
     "url": "https://github.com/karanhb-pixel/grocery-inventory-app/issues"
   },

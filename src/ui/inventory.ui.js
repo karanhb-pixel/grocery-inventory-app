@@ -1,15 +1,33 @@
-import { getFilteredInventory, deleteItem } from '../features/inventory.features.js';
-import { state } from '../core/state.js';
+import {
+  getFilteredInventory,
+  deleteItem,
+} from "../features/inventory.features.js";
+import { state } from "../core/state.js";
+
+// Security: Helper to escape HTML and prevent XSS
+const escapeHtml = (value) => {
+  const str = value === null || value === undefined ? "" : String(value);
+  const div = document.createElement("div");
+  div.textContent = str;
+  // Escape quotes for attribute safety
+  return div.innerHTML.replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+};
+
+// Robustness: Helper to ensure price is a valid finite number
+const toSafePrice = (val) => {
+  const num = Number(val);
+  return Number.isFinite(num) ? num : 0;
+};
 
 export function renderInventory() {
-  const tbody = document.querySelector('#inventory-table tbody');
-  const itemCount = document.getElementById('item-count'); 
-  const billItemDatalist = document.getElementById('bill-item-options');
-  
-  tbody.innerHTML = '';
-  
+  const tbody = document.querySelector("#inventory-table tbody");
+  const itemCount = document.getElementById("item-count");
+  const billItemDatalist = document.getElementById("bill-item-options");
+
+  tbody.innerHTML = "";
+
   const items = getFilteredInventory();
-  
+
   // Update Item Count
   if (itemCount) {
     itemCount.textContent = items.length;
@@ -17,85 +35,131 @@ export function renderInventory() {
 
   // Populate Bill Item Datalist (Searchable)
   if (billItemDatalist) {
-    billItemDatalist.innerHTML = '';
-    
-    // Sort items for the dropdown regardless of table sort state
-    const sortedItems = [...state.inventory].sort((a, b) => a.name.localeCompare(b.name));
-    
-    sortedItems.forEach(item => {
-      billItemDatalist.insertAdjacentHTML('beforeend', `
-        <option value="${item.name}">${item.category} - ₹${item.price}</option>
-      `);
+    billItemDatalist.innerHTML = "";
+    const sortedItems = [...state.inventory].sort((a, b) =>
+      a.name.localeCompare(b.name),
+    );
+    sortedItems.forEach((item) => {
+      billItemDatalist.insertAdjacentHTML(
+        "beforeend",
+        `
+        <option value="${escapeHtml(item.name)}">${escapeHtml(item.category)} - ₹${toSafePrice(item.price).toFixed(2)}</option>
+      `,
+      );
     });
   }
 
-  items.forEach(item => {
-    tbody.insertAdjacentHTML('beforeend', `
-      <tr data-id="${item.id}">
-        <td>${item.name}</td>
-        <td>₹${item.price.toFixed(2)}</td>
-        <td>${item.category}</td>
-        <td>
-          <button class="edit-btn">Edit</button>
-          <button class="delete-btn">Remove</button>
-        </td>
-      </tr>
-    `);
-  });
+  // Conditional Rendering: Table vs Cards
+  const isMobile = window.innerWidth <= 768;
+  const inventoryCards = document.getElementById("inventory-cards");
+
+  if (isMobile && inventoryCards) {
+    // Mobile Card View
+    if (tbody) tbody.innerHTML = ""; // Hide table body
+    inventoryCards.innerHTML = "";
+    inventoryCards.style.display = "flex";
+
+    items.forEach((item) => {
+      const safePrice = toSafePrice(item.price);
+      inventoryCards.insertAdjacentHTML(
+        "beforeend",
+        `
+         <div class="mobile-card" data-id="${escapeHtml(item.id)}">
+           <div class="card-header">
+             <div class="card-title">${escapeHtml(item.name)}</div>
+             <div class="card-price">₹${safePrice.toFixed(2)}</div>
+           </div>
+           <div class="card-meta">
+             <span>📂 ${escapeHtml(item.category)}</span>
+           </div>
+           <div class="card-actions">
+             <button class="edit-btn secondary">Edit</button>
+             <button class="delete-btn danger">Remove</button>
+           </div>
+         </div>
+       `,
+      );
+    });
+  } else {
+    // Desktop Table View
+    if (inventoryCards) inventoryCards.style.display = "none";
+    if (tbody) {
+      tbody.innerHTML = "";
+      items.forEach((item) => {
+        const safePrice = toSafePrice(item.price);
+        tbody.insertAdjacentHTML(
+          "beforeend",
+          `
+           <tr data-id="${escapeHtml(item.id)}">
+             <td>${escapeHtml(item.name)}</td>
+             <td>₹${safePrice.toFixed(2)}</td>
+             <td>${escapeHtml(item.category)}</td>
+             <td>
+               <button class="edit-btn">Edit</button>
+               <button class="delete-btn">Remove</button>
+             </td>
+           </tr>
+         `,
+        );
+      });
+    }
+  }
 }
 
 export function initInventoryUI() {
-  const searchInput = document.getElementById('search-input');
-  const sortBtn = document.getElementById('toggle-sort');
-  const table = document.getElementById('inventory-table');
+  const searchInput = document.getElementById("search-input");
+  const sortBtn = document.getElementById("toggle-sort");
+  const table = document.getElementById("inventory-table");
+  const inventoryCards = document.getElementById("inventory-cards");
+
+  // Generic handler for events from both table and cards
+  const handleAction = (e) => {
+    const target = e.target;
+    if (target.classList.contains("delete-btn")) {
+      const container = target.closest("tr") || target.closest(".mobile-card");
+      if (container) {
+        deleteItem(Number(container.dataset.id));
+        renderInventory();
+      }
+    }
+    if (target.classList.contains("edit-btn")) {
+      const container = target.closest("tr") || target.closest(".mobile-card");
+      if (container) {
+        const id = Number(container.dataset.id);
+        const item = state.inventory.find((i) => i.id === id);
+        if (item) startEdit(item);
+      }
+    }
+  };
 
   if (searchInput) {
-    searchInput.addEventListener('input', (e) => {
+    searchInput.addEventListener("input", (e) => {
       state.searchTerm = e.target.value;
       renderInventory();
     });
   }
 
   if (sortBtn) {
-    sortBtn.addEventListener('click', () => {
-      state.sortBy = state.sortBy === 'name' ? 'category' : 'name';
-      sortBtn.textContent = `Sort by: ${state.sortBy === 'name' ? 'Name (A-Z)' : 'Category'}`;
+    sortBtn.addEventListener("click", () => {
+      state.sortBy = state.sortBy === "name" ? "category" : "name";
+      sortBtn.textContent = `Sort by: ${state.sortBy === "name" ? "Name (A-Z)" : "Category"}`;
       renderInventory();
     });
   }
 
-  if (table) {
-    table.addEventListener('click', (e) => {
-      if (e.target.classList.contains('delete-btn')) {
-        const tr = e.target.closest('tr');
-        if (tr) {
-          deleteItem(Number(tr.dataset.id));
-          renderInventory();
-        }
-      }
-      if (e.target.classList.contains('edit-btn')) {
-         const tr = e.target.closest('tr');
-         if (tr) {
-           const id = Number(tr.dataset.id);
-           const item = state.inventory.find(i => i.id === id);
-           if (item) {
-             startEdit(item);
-           }
-         }
-      }
-    });
-  }
+  if (table) table.addEventListener("click", handleAction);
+  if (inventoryCards) inventoryCards.addEventListener("click", handleAction);
 }
 
 function startEdit(item) {
   state.editingId = item.id;
-  
+
   // Show the form container
-  const itemFormContainer = document.getElementById('item-form-container');
+  const itemFormContainer = document.getElementById("item-form-container");
   if (itemFormContainer) {
-    itemFormContainer.style.display = 'block';
+    itemFormContainer.style.display = "block";
   }
-  
+
   // Get the first row inputs (using name attributes)
   const firstRow = document.querySelector('.item-row[data-row-id="0"]');
   if (!firstRow) return;
@@ -108,21 +172,21 @@ function startEdit(item) {
   if (nameInput) nameInput.value = item.name;
   if (priceInput) priceInput.value = item.price;
   if (categorySelect) categorySelect.value = item.category;
-  
+
   // Change Button Text
   const submitBtn = document.querySelector('#item-form button[type="submit"]');
-  if (submitBtn) submitBtn.textContent = 'Update Item';
+  if (submitBtn) submitBtn.textContent = "Update Item";
 }
 
 export function cancelEdit() {
   state.editingId = null;
-  
+
   // Hide the form container
-  const itemFormContainer = document.getElementById('item-form-container');
+  const itemFormContainer = document.getElementById("item-form-container");
   if (itemFormContainer) {
-    itemFormContainer.style.display = 'none';
+    itemFormContainer.style.display = "none";
   }
-  
+
   // Reset the first row
   const firstRow = document.querySelector('.item-row[data-row-id="0"]');
   if (firstRow) {
@@ -130,12 +194,12 @@ export function cancelEdit() {
     const priceInput = firstRow.querySelector('[name="itemPrice"]');
     const categorySelect = firstRow.querySelector('[name="category"]');
 
-    if (nameInput) nameInput.value = '';
-    if (priceInput) priceInput.value = '';
+    if (nameInput) nameInput.value = "";
+    if (priceInput) priceInput.value = "";
     if (categorySelect) categorySelect.selectedIndex = 0;
   }
-  
+
   // Reset button text
   const submitBtn = document.querySelector('#item-form button[type="submit"]');
-  if (submitBtn) submitBtn.textContent = 'Add All Items';
+  if (submitBtn) submitBtn.textContent = "Add All Items";
 }
