@@ -52,6 +52,50 @@
     --transition-slow: 300ms cubic-bezier(0.4, 0, 0.2, 1);
 }
 
+/* Stock Meter Styles */
+.stock-meter-container {
+    width: 100%;
+    height: 8px;
+    background: var(--bg-tertiary);
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+    margin-top: 10px;
+}
+
+.stock-meter-info {
+    width: 100%;
+    margin-top: 10px;
+    font-size: 12px;
+}
+
+.stock-meter-info span {
+    display: block;
+    margin-bottom: 5px;
+    color: var(--text-secondary);
+}
+
+.stock-bar {
+    height: 100%;
+    transition: width 0.5s ease, background-color 0.3s ease;
+}
+
+/* Dynamic colors based on stock health */
+.stock-bar.healthy {
+    background: var(--success);
+}
+
+/* > 50% */
+.stock-bar.warning {
+    background: var(--warning);
+}
+
+/* 20% - 50% */
+.stock-bar.critical {
+    background: var(--error);
+}
+
+/* < 20% */
+
 /* Dark Theme */
 [data-theme="dark"] {
     --bg-primary: #0f172a;
@@ -1597,17 +1641,21 @@ h3 {
     .mobile-only {
         display: block !important;
     }
-    
+
     .desktop-only {
         display: none !important;
     }
 
-    #inventory-table, #bills-table, #analysis-table {
-        display: none; /* Hide tables on small mobile, show cards instead */
+    #inventory-table,
+    #bills-table,
+    #analysis-table {
+        display: none;
+        /* Hide tables on small mobile, show cards instead */
     }
 
     /* Card View Styling */
-    .inventory-cards, .bill-cards {
+    .inventory-cards,
+    .bill-cards {
         display: flex;
         flex-direction: column;
         gap: 16px;
@@ -1668,7 +1716,8 @@ h3 {
 
     .card-actions button {
         flex: 1;
-        height: 44px; /* Touch friendly */
+        height: 44px;
+        /* Touch friendly */
         display: flex;
         align-items: center;
         justify-content: center;
@@ -1724,20 +1773,24 @@ h3 {
     }
 
     /* Stack the row inputs vertically on small phones */
-    .item-row, .bill-row {
+    .item-row,
+    .bill-row {
         display: flex;
         flex-direction: column;
         gap: 10px;
         padding: 16px;
     }
 
-    .item-row input, .item-row select,
+    .item-row input,
+    .item-row select,
     .bill-row input {
         width: 100%;
-        font-size: 16px !important; /* Prevent iOS zoom */
+        font-size: 16px !important;
+        /* Prevent iOS zoom */
     }
 
-    .remove-row-btn, .remove-bill-row-btn {
+    .remove-row-btn,
+    .remove-bill-row-btn {
         align-self: flex-end;
         padding: 12px 20px;
         width: auto;

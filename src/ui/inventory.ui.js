@@ -3,6 +3,7 @@ import {
   deleteItem,
 } from "../features/inventory.features.js";
 import { state } from "../core/state.js";
+import { getItemBurnRate } from "../features/analysis.features.js";
 
 // Security: Helper to escape HTML and prevent XSS
 const escapeHtml = (value) => {
@@ -61,23 +62,48 @@ export function renderInventory() {
 
     items.forEach((item) => {
       const safePrice = toSafePrice(item.price);
+      // Calculate days remaining for this item
+      const burnRateData = getItemBurnRate(item.name);
+      const daysRemaining = burnRateData.daysRemaining;
+      const daysRemainingDisplay =
+        daysRemaining === Infinity
+          ? "∞"
+          : daysRemaining > 999
+            ? ">999"
+            : daysRemaining.toFixed(1);
+
+      // Calculate stock percentage for meter (assuming 14 days = 100% full)
+      const stockPercentage = Math.min((daysRemaining / 14) * 100, 100);
+      const stockClass =
+        stockPercentage < 20
+          ? "critical"
+          : stockPercentage < 50
+            ? "warning"
+            : "healthy";
+
       inventoryCards.insertAdjacentHTML(
         "beforeend",
         `
-         <div class="mobile-card" data-id="${escapeHtml(item.id)}">
-           <div class="card-header">
-             <div class="card-title">${escapeHtml(item.name)}</div>
-             <div class="card-price">₹${safePrice.toFixed(2)}</div>
+           <div class="mobile-card" data-id="${escapeHtml(item.id)}">
+             <div class="card-header">
+               <div class="card-title">${escapeHtml(item.name)}</div>
+               <div class="card-price">₹${safePrice.toFixed(2)}</div>
+             </div>
+             <div class="card-meta">
+               <span>📂 ${escapeHtml(item.category)}</span>
+             </div>
+             <div class="stock-meter-info">
+               <span>Stock Status: <strong>${daysRemainingDisplay} days left</strong></span>
+               <div class="stock-meter-container">
+                 <div class="stock-bar ${stockClass}" style="width: ${stockPercentage}%"></div>
+               </div>
+             </div>
+             <div class="card-actions">
+               <button class="edit-btn secondary">Edit</button>
+               <button class="delete-btn danger">Remove</button>
+             </div>
            </div>
-           <div class="card-meta">
-             <span>📂 ${escapeHtml(item.category)}</span>
-           </div>
-           <div class="card-actions">
-             <button class="edit-btn secondary">Edit</button>
-             <button class="delete-btn danger">Remove</button>
-           </div>
-         </div>
-       `,
+         `,
       );
     });
   } else {
@@ -87,19 +113,46 @@ export function renderInventory() {
       tbody.innerHTML = "";
       items.forEach((item) => {
         const safePrice = toSafePrice(item.price);
+        // Calculate days remaining for this item
+        const burnRateData = getItemBurnRate(item.name);
+        const daysRemaining = burnRateData.daysRemaining;
+        const daysRemainingDisplay =
+          daysRemaining === Infinity
+            ? "∞"
+            : daysRemaining > 999
+              ? ">999"
+              : daysRemaining.toFixed(1);
+
+        // Calculate stock percentage for meter (assuming 14 days = 100% full)
+        const stockPercentage = Math.min((daysRemaining / 14) * 100, 100);
+        const stockClass =
+          stockPercentage < 20
+            ? "critical"
+            : stockPercentage < 50
+              ? "warning"
+              : "healthy";
+
         tbody.insertAdjacentHTML(
           "beforeend",
           `
-           <tr data-id="${escapeHtml(item.id)}">
-             <td>${escapeHtml(item.name)}</td>
-             <td>₹${safePrice.toFixed(2)}</td>
-             <td>${escapeHtml(item.category)}</td>
-             <td>
-               <button class="edit-btn">Edit</button>
-               <button class="delete-btn">Remove</button>
-             </td>
-           </tr>
-         `,
+             <tr data-id="${escapeHtml(item.id)}">
+               <td>${escapeHtml(item.name)}</td>
+               <td>₹${safePrice.toFixed(2)}</td>
+               <td>${escapeHtml(item.category)}</td>
+               <td>
+                 <div class="stock-meter-info">
+                   <span>Stock Status: <strong>${daysRemainingDisplay} days left</strong></span>
+                   <div class="stock-meter-container">
+                     <div class="stock-bar ${stockClass}" style="width: ${stockPercentage}%"></div>
+                   </div>
+                 </div>
+               </td>
+               <td>
+                 <button class="edit-btn">Edit</button>
+                 <button class="delete-btn">Remove</button>
+               </td>
+             </tr>
+           `,
         );
       });
     }
