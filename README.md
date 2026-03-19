@@ -10,7 +10,7 @@ This is the final source code for the single-page inventory management applicati
 - **Features:**
   - **Inventory Management:** Add, View, Inline Edit (Desktop), Card View (Mobile).
   - **Bulk Entry:** Fast addition of multiple inventory items and purchase bills.
-  - **Purchase Analysis:** Track item purchase frequency and price history over 7, 30, and 90 days.
+  - **Purchase Analysis:** Track item purchase frequency, price history, and stock burn rates with automated "Days Remaining" predictions over customizable time periods.
   - **Real-time Sync:** Status indicators for cloud operations (Success, Error, Loading).
 - **Data Fields:** ID, ITEM_NAME, PRICE, PURCHASE_PRICE, CATEGORY, STATUS.
 

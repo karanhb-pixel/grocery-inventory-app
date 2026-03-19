@@ -19,6 +19,9 @@
         }
       }
     </script>
+    <!-- External Libraries for Charts and Barcode Scanning -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://unpkg.com/html5-qrcode"></script>
     <link rel="manifest" href="manifest.json" />
     <meta name="theme-color" content="#6366f1" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -50,9 +53,14 @@
       <div id="input-panel">
         <div class="input-header">
           <h2>Inventory Items</h2>
-          <button id="add-new-item" class="add-item-btn">
-            ➕ Add New Item
-          </button>
+          <div class="input-actions">
+            <button id="scan-barcode-btn" class="scan-btn">
+              📷 Scan Barcode
+            </button>
+            <button id="add-new-item" class="add-item-btn">
+              ➕ Add New Item
+            </button>
+          </div>
         </div>
 
         <div id="item-form-container" style="display: none">
@@ -253,6 +261,15 @@
             </select>
           </div>
         </div>
+        
+        <div class="analysis-charts">
+          <div class="chart-card">
+            <h3>Spending by Category</h3>
+            <div class="chart-container">
+              <canvas id="spending-chart"></canvas>
+            </div>
+          </div>
+        </div>
 
         <div class="table-container">
           <table id="analysis-table">
@@ -263,6 +280,8 @@
                 <th>Purchase Count</th>
                 <th>Avg Quantity</th>
                 <th>Avg Price</th>
+                <th>Burn Rate (per day)</th>
+                <th>Est. Days Left</th>
                 <th>Last Purchased</th>
               </tr>
             </thead>
@@ -444,6 +463,33 @@
     >
       <span aria-hidden="true">➕</span>
     </button>
+
+    <!-- Price History Modal -->
+    <div id="price-history-modal" class="chart-modal">
+      <div class="chart-modal-content">
+        <div class="chart-modal-header">
+          <h3 id="price-history-title">Price History</h3>
+          <button class="close-chart-modal">&times;</button>
+        </div>
+        <div class="chart-modal-body">
+          <canvas id="price-history-chart"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- Barcode Scanner Modal -->
+    <div id="scanner-modal" class="scanner-modal">
+      <div class="scanner-modal-content">
+        <div class="scanner-modal-header">
+          <h3>Scan Barcode/QR Code</h3>
+          <button class="close-scanner-modal">&times;</button>
+        </div>
+        <div class="scanner-modal-body">
+          <div id="scanner-reader"></div>
+          <div id="scanner-status" class="scanner-status">Initializing camera...</div>
+        </div>
+      </div>
+    </div>
 
     <script type="module" src="./src/app.js?v=2.0"></script>
   </body>

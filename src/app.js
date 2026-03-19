@@ -45,6 +45,8 @@ import {
 } from "./ui/bulk-entry.ui.js";
 import { renderAnalysis, initAnalysisUI } from "./ui/analysis.ui.js";
 import { initMagneticButtons } from "./ui/gsap-effects.js";
+import { renderSpendingChart } from "./ui/charts.ui.js";
+import { initScannerUI } from "./services/scanner.service.js";
 
 import {
   syncInventory,
@@ -87,6 +89,7 @@ document.addEventListener("DOMContentLoaded", () => {
   initBulkEntryUI(); // Wired up logic for bulk item entry
   initBulkBillEntryUI(); // Wired up logic for bulk bill entry
   initAnalysisUI(); // Wired up logic for purchase analysis
+  initScannerUI(); // Wired up logic for barcode scanner
 
   // Mobile FAB functionality
   const mobileFab = document.getElementById("mobile-fab");
@@ -114,6 +117,7 @@ document.addEventListener("DOMContentLoaded", () => {
   // Render analysis when panel is shown
   document.addEventListener("analysis-shown", () => {
     renderAnalysis();
+    renderSpendingChart("spending-chart");
   });
 
   /* INVENTORY */

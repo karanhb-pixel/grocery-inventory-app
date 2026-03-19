@@ -4,6 +4,7 @@ import {
 } from "../features/inventory.features.js";
 import { state } from "../core/state.js";
 import { getItemBurnRate } from "../features/analysis.features.js";
+import { renderPriceHistory } from "./price-chart.ui.js";
 
 // Security: Helper to escape HTML and prevent XSS
 const escapeHtml = (value) => {
@@ -86,7 +87,7 @@ export function renderInventory() {
         `
            <div class="mobile-card" data-id="${escapeHtml(item.id)}">
              <div class="card-header">
-               <div class="card-title">${escapeHtml(item.name)}</div>
+               <div class="card-title" style="cursor: pointer; color: var(--primary); text-decoration: underline;" title="View Price History">${escapeHtml(item.name)}</div>
                <div class="card-price">₹${safePrice.toFixed(2)}</div>
              </div>
              <div class="card-meta">
@@ -136,7 +137,7 @@ export function renderInventory() {
           "beforeend",
           `
              <tr data-id="${escapeHtml(item.id)}">
-               <td>${escapeHtml(item.name)}</td>
+               <td style="cursor: pointer; color: var(--primary); text-decoration: underline;" title="View Price History" class="item-name-cell">${escapeHtml(item.name)}</td>
                <td>₹${safePrice.toFixed(2)}</td>
                <td>${escapeHtml(item.category)}</td>
                <td>
@@ -183,7 +184,39 @@ export function initInventoryUI() {
         if (item) startEdit(item);
       }
     }
+    if (target.classList.contains("item-name-cell") || target.classList.contains("card-title")) {
+      const container = target.closest("tr") || target.closest(".mobile-card");
+      if (container) {
+        const id = Number(container.dataset.id);
+        const item = state.inventory.find((i) => i.id === id);
+        if (item) {
+          const modal = document.getElementById("price-history-modal");
+          const title = document.getElementById("price-history-title");
+          if (modal) {
+            modal.classList.add("active");
+            if (title) title.textContent = `Price History: ${item.name}`;
+            renderPriceHistory("price-history-chart", item.name);
+          }
+        }
+      }
+    }
   };
+
+  const closeBtn = document.querySelector(".close-chart-modal");
+  if (closeBtn) {
+    closeBtn.addEventListener("click", () => {
+      const modal = document.getElementById("price-history-modal");
+      if (modal) modal.classList.remove("active");
+    });
+  }
+
+  // Close on backdrop click
+  const priceModal = document.getElementById("price-history-modal");
+  if (priceModal) {
+    priceModal.addEventListener("click", (e) => {
+      if (e.target === priceModal) priceModal.classList.remove("active");
+    });
+  }
 
   if (searchInput) {
     searchInput.addEventListener("input", (e) => {

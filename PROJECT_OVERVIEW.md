@@ -39,7 +39,9 @@ This is a comprehensive single-page web application for managing grocery invento
 ### 📊 Purchase Analysis
 - **Frequency Analysis**: Calculate how often items are purchased over different time periods (7, 30, 90 days).
 - **Spending Insights**: View average quantity, price, and last purchase date for each item.
-- **Responsive Tables**: Detailed analysis data rendered via `analysis.ui.js`.
+- **Burn Rate Prediction**: Estimate how much of an item is used per day and predict when it will run out based on current stock.
+- **Stability Fixes**: Guarded against division-by-zero errors in price calculations and prevented ID collisions during item creation.
+- **Responsive Tables**: Detailed analysis data rendered via `analysis.ui.js` with color-coded alerts for low stock predictions.
 
 ### ☁️ Cloud Synchronization & Integration
 - **JSONBin.io Integration**: Primary cloud storage for robust synchronization.
