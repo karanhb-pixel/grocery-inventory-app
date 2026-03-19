@@ -1,5 +1,6 @@
 import { loadStorage } from "./core/storage.js";
 import { state } from "./core/state.js";
+import { initExportHandlers } from "./core/export.js";
 
 // Debounce helper for performance
 const debounce = (fn, delay) => {
@@ -84,6 +85,7 @@ document.addEventListener("DOMContentLoaded", () => {
   initModals();
   initBillsFormUI();
   initItemFormUI();
+  initExportHandlers(); // Initialize export buttons (JSON & CSV)
   initInventoryUI(); // Wired up logic for Search, Sort, Edit, Delete
   initBillsUI(); // Wired up logic for Bills Edit/Delete
   initBulkEntryUI(); // Wired up logic for bulk item entry
@@ -97,8 +99,9 @@ document.addEventListener("DOMContentLoaded", () => {
     mobileFab.addEventListener("click", () => {
       // Logic to show appropriate form based on current view
       const billsPanel = document.getElementById("bills-panel");
-      const isBillsView = billsPanel && window.getComputedStyle(billsPanel).display === "block";
-      
+      const isBillsView =
+        billsPanel && window.getComputedStyle(billsPanel).display === "block";
+
       if (isBillsView) {
         const addBillBtn = document.getElementById("add-new-bill");
         if (addBillBtn) addBillBtn.click();
