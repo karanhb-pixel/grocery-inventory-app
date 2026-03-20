@@ -31,10 +31,10 @@ import {
 } from "./ui/inventory.ui.js";
 import { renderBills, cancelEditBill, initBillsUI } from "./ui/bills.ui.js";
 import {
-  initNavigation,
   initModals,
   initBillsFormUI,
   initItemFormUI,
+  initDataActions,
 } from "./ui/navigation.ui.js";
 import {
   initBulkEntryUI,
@@ -57,6 +57,16 @@ import {
 } from "./services/jsonbin.service.js";
 
 document.addEventListener("DOMContentLoaded", () => {
+  // PWA Support: Register Service Worker
+  if ("serviceWorker" in navigator) {
+    window.addEventListener("load", () => {
+      navigator.serviceWorker
+        .register("/sw.js")
+        .then((reg) => console.log("PWA Ready:", reg.scope))
+        .catch((err) => console.error("PWA Fail:", err));
+    });
+  }
+
   // Select DOM Elements
   const itemForm = document.getElementById("item-form");
   const itemName = document.getElementById("itemName");
@@ -85,6 +95,7 @@ document.addEventListener("DOMContentLoaded", () => {
   initModals();
   initBillsFormUI();
   initItemFormUI();
+  initDataActions();
   initExportHandlers(); // Initialize export buttons (JSON & CSV)
   initInventoryUI(); // Wired up logic for Search, Sort, Edit, Delete
   initBillsUI(); // Wired up logic for Bills Edit/Delete

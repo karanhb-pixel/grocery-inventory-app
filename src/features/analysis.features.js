@@ -5,12 +5,13 @@ import { state } from "../core/state.js";
  * @param {number} days - Number of days to look back
  * @returns {Array} Sorted array of items with frequency data
  */
-export function getItemFrequency(days = 30) {
+export function getItemFrequency(days = 30, customBills = null) {
   const now = new Date();
   const cutoffDate = new Date(now.getTime() - days * 24 * 60 * 60 * 1000);
+  const billsToUse = customBills || state.bills;
 
   // Filter bills within the time period
-  const relevantBills = state.bills.filter((bill) => {
+  const relevantBills = billsToUse.filter((bill) => {
     const billDate = new Date(bill.date);
     return billDate >= cutoffDate && billDate <= now;
   });
@@ -61,9 +62,17 @@ export function getItemFrequency(days = 30) {
  * @param {number} days - Number of days to look back for frequency data (default: 30)
  * @returns {Object} Object containing burnRate, daysRemaining, and related data
  */
-export function getItemBurnRate(itemName, days = 30) {
+export function getItemBurnRate(itemName, days = 30, customBills = null, customInventory = null) {
+  // Support user test signature: getItemBurnRate(name, mockBills)
+  let billsToUse = customBills;
+  let daysToUse = days;
+  if (Array.isArray(days)) {
+    billsToUse = days;
+    daysToUse = 30; // Default days if not provided
+  }
+
   // Get frequency data for the item
-  const frequencyData = getItemFrequency(days);
+  const frequencyData = getItemFrequency(daysToUse, billsToUse);
   const itemFreq = frequencyData.find((item) => item.itemName === itemName);
 
   if (!itemFreq) {
@@ -78,7 +87,8 @@ export function getItemBurnRate(itemName, days = 30) {
   }
 
   // Get current stock from inventory
-  const inventoryItem = state.inventory.find((item) => item.name === itemName);
+  const inventoryToUse = customInventory || state.inventory;
+  const inventoryItem = inventoryToUse.find((item) => item.name === itemName);
   const currentStock = inventoryItem
     ? parseFloat(inventoryItem.quantity) || 0
     : 0;
@@ -87,7 +97,7 @@ export function getItemBurnRate(itemName, days = 30) {
   // Burn rate = average quantity per purchase * purchase frequency per day
   const avgQuantityPerPurchase = parseFloat(itemFreq.avgQuantity) || 0;
   const purchaseCount = itemFreq.count;
-  const purchaseFrequencyPerDay = purchaseCount / days; // purchases per day
+  const purchaseFrequencyPerDay = purchaseCount / daysToUse; // purchases per day
 
   const burnRate = avgQuantityPerPurchase * purchaseFrequencyPerDay;
 

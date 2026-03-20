@@ -1,5 +1,6 @@
 import gsap from "gsap";
 import { clearAllRows } from "./bulk-entry.ui.js";
+import { importFromJSON, importFromCSV, clearAllData } from "../services/data.service.js";
 
 export function initNavigation() {
   const inputPanel = document.getElementById("input-panel");
@@ -201,4 +202,95 @@ export function initItemFormUI() {
       }
     });
   }
+}
+
+/**
+ * Generic Confirmation Modal Handler
+ */
+export function showConfirmation(message, onConfirm) {
+  const modal = document.getElementById("confirmation-modal");
+  const messageEl = document.getElementById("confirmation-message");
+  const executeBtn = document.getElementById("execute-confirm");
+  const cancelBtn = document.getElementById("cancel-confirm");
+
+  if (!modal || !messageEl || !executeBtn || !cancelBtn) return;
+
+  messageEl.textContent = message;
+  modal.classList.add("active");
+
+  const close = () => {
+    modal.classList.remove("active");
+    // Cleanup listeners
+    executeBtn.replaceWith(executeBtn.cloneNode(true));
+    cancelBtn.replaceWith(cancelBtn.cloneNode(true));
+  };
+
+  const currentExecuteBtn = document.getElementById("execute-confirm");
+  const currentCancelBtn = document.getElementById("cancel-confirm");
+
+  currentExecuteBtn.addEventListener("click", () => {
+    onConfirm();
+    close();
+  });
+
+  currentCancelBtn.addEventListener("click", () => {
+    close();
+  });
+}
+
+/**
+ * Initialize Data Management Actions
+ */
+export function initDataActions() {
+  const jsonInput = document.getElementById("json-import");
+  const csvInput = document.getElementById("csv-import");
+  const clearBtn = document.getElementById("clear-data-btn");
+
+  const mobileJsonInput = document.getElementById("mobile-json-import");
+  const mobileCsvInput = document.getElementById("mobile-csv-import");
+  const mobileClearBtn = document.getElementById("mobile-clear-data");
+
+  const handleImport = (file, type) => {
+    if (!file) return;
+
+    showConfirmation(
+      "Importing " + type.toUpperCase() + " data will overwrite your current inventory and bills. Are you sure you want to proceed?",
+      async () => {
+        const reader = new FileReader();
+        reader.onload = async (e) => {
+          const content = e.target.result;
+          let success = false;
+          if (type === "json") {
+            success = await importFromJSON(content);
+          } else {
+            success = await importFromCSV(content);
+          }
+
+          if (success) {
+            alert(type.toUpperCase() + " Imported Successfully!");
+          } else {
+            alert("Import failed. Please check the file format.");
+          }
+        };
+        reader.readAsText(file);
+      }
+    );
+  };
+
+  const handleClear = () => {
+    showConfirmation("Are you sure you want to clear all inventory and bills? This cannot be undone.", () => {
+      clearAllData();
+      alert("All data cleared.");
+    });
+  };
+
+  // Desktop Listeners
+  if (jsonInput) jsonInput.addEventListener("change", (e) => handleImport(e.target.files[0], "json"));
+  if (csvInput) csvInput.addEventListener("change", (e) => handleImport(e.target.files[0], "csv"));
+  if (clearBtn) clearBtn.addEventListener("click", handleClear);
+
+  // Mobile Listeners
+  if (mobileJsonInput) mobileJsonInput.addEventListener("change", (e) => handleImport(e.target.files[0], "json"));
+  if (mobileCsvInput) mobileCsvInput.addEventListener("change", (e) => handleImport(e.target.files[0], "csv"));
+  if (mobileClearBtn) mobileClearBtn.addEventListener("click", handleClear);
 }
