@@ -1634,7 +1634,22 @@ h3 {
 
     .sync-group {
         width: 100%;
-        max-width: 320px;
+        max-width: 400px;
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+        padding: 24px;
+        gap: 16px;
+    }
+
+    .sync-group h4 {
+        font-size: 14px;
+        margin-bottom: 4px;
+    }
+
+    .sync-btn {
+        width: 100%;
+        min-width: 0;
     }
 
     /* Mobile-only layout fixes */

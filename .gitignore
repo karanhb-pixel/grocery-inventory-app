@@ -3,4 +3,5 @@ node_modules/
 /.vscode/
 .DS_Store
 # Netlify function builds
-.netlify/
+.netlify
+readme template
