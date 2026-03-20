@@ -110,7 +110,7 @@ The **Grocery Inventory Management System** is a sophisticated single-page appli
 
 ### Purchase Analysis View
 
-<img src="screenshots/Purchase_analyse.png" width="600" alt="Analysis">
+<img src="screenshots/Purchase_analyse_page.png" width="600" alt="Analysis">
 
 ### Data Management View
 
@@ -118,7 +118,7 @@ The **Grocery Inventory Management System** is a sophisticated single-page appli
 
 ### Mobile View
 
-<img src="screenshots/mobile_resposive.png" width="600" alt="Mobile View">
+<img src="screenshots/mobile_responsive.png" width="600" alt="Mobile View">
 
 ---
 
