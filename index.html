@@ -1,231 +1,604 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Grocery Inventory Tracker</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="style.css">
-</head>
-<body>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="style.css" />
+    <link rel="icon" href="data:," />
+    <script type="importmap">
+      {
+        "imports": {
+          "gsap": "https://cdn.jsdelivr.net/npm/gsap@3.12.5/+esm"
+        }
+      }
+    </script>
+    <!-- External Libraries for Charts and Barcode Scanning -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://unpkg.com/html5-qrcode"></script>
+    <link rel="manifest" href="manifest.json" />
+    <meta name="theme-color" content="#6366f1" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta
+      name="apple-mobile-web-app-status-bar-style"
+      content="black-translucent"
+    />
+    <style>
+      /* Confirmation Modal Styles (Inlined for reliability) */
+      .confirmation-modal {
+          position: fixed;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 100%;
+          background: rgba(15, 23, 42, 0.7);
+          backdrop-filter: blur(8px);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          z-index: 2000;
+          visibility: hidden;
+          pointer-events: none;
+          opacity: 0;
+          transition: opacity 0.3s ease, visibility 0.3s;
+      }
+      .confirmation-modal.active {
+          visibility: visible;
+          pointer-events: auto;
+          opacity: 1;
+      }
+      .confirmation-modal-content {
+          background: var(--bg-secondary, #ffffff);
+          width: 95%;
+          max-width: 400px;
+          padding: 32px;
+          border-radius: var(--radius-lg, 16px);
+          border: 1px solid var(--border, #e2e8f0);
+          box-shadow: 0 25px 50px -12px rgb(0 0 0 / 0.25);
+          transform: translateY(20px);
+          transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+      }
+      .confirmation-modal.active .confirmation-modal-content {
+          transform: translateY(0);
+      }
+      .confirmation-modal-header {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          margin-bottom: 16px;
+          color: #f59e0b; /* var(--warning) */
+      }
+      .confirmation-modal-header h3 {
+          margin: 0;
+          font-size: 1.25rem;
+          color: var(--text-primary, #1e293b);
+      }
+      .confirmation-modal-body {
+          color: var(--text-secondary, #64748b);
+          margin-bottom: 24px;
+          line-height: 1.6;
+          font-size: 0.95rem;
+      }
+      .confirmation-modal-footer {
+          display: flex;
+          justify-content: flex-end;
+          gap: 12px;
+      }
+      .confirm-btn-primary {
+          padding: 10px 20px;
+          background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+          color: white;
+          border: none;
+          border-radius: 8px;
+          font-size: 14px;
+          font-weight: 600;
+          cursor: pointer;
+          transition: 0.2s;
+      }
+      .confirm-btn-primary:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+      }
+      .cancel-btn-secondary {
+          padding: 10px 20px;
+          background: #f1f5f9;
+          color: #1e293b;
+          border: 1px solid #e2e8f0;
+          border-radius: 8px;
+          font-size: 14px;
+          font-weight: 600;
+          cursor: pointer;
+          transition: 0.2s;
+      }
+      .cancel-btn-secondary:hover {
+          background: #e2e8f0;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="bg-glow-1"></div>
+    <div class="bg-glow-2"></div>
     <div class="container">
-        <h1>🛒 Inventory Management System</h1>
-        
-        <!-- Cloud Storage Sync Section -->
-        <div id="sheets-sync-section" class="sheets-sync-section">
-            <div class="sync-group">
-                <h4>JSONBin.io Cloud Sync</h4>
-                <button id="sync-to-jsonbin" class="sync-btn sync-to-jsonbin" onclick="syncToJSONBin()">
-                    📤 Sync to JSONBin
-                </button>
-                <button id="load-from-jsonbin" class="sync-btn load-from-jsonbin" onclick="loadFromJSONBin()">
-                    📥 Load from JSONBin
-                </button>
-            </div>
+      <h1>🛒 Inventory Management System</h1>
+
+      <!-- Cloud Storage Sync Section -->
+      <div id="sheets-sync-section" class="sheets-sync-section">
+        <div class="sync-group">
+          <span id="jsonbin-status" class="jsonbin-status"></span>
+          <h4 id="sync-header">Inventory Cloud Sync</h4>
+          <button id="sync-to-jsonbin" class="sync-btn sync-to-jsonbin">
+            📤 Sync to JSONBin
+          </button>
+          <button id="load-from-jsonbin" class="sync-btn load-from-jsonbin">
+            📥 Load from JSONBin
+          </button>
         </div>
-        
-        <div id="input-panel">
-            <div class="input-header">
-                <h2>Add New Item</h2>
-                <button id="show-bills-main" class="bills-btn main-bills-btn" onclick="showBillsView()">
-                    📄 View Bills
-                </button>
-            </div>
-            <form id="item-form">
-                <input type="text" id="itemName" placeholder="Item Name" required>
-                <input type="number" id="sellingPrice" placeholder="Selling Price" required step="0.01">
-                <input type="number" id="purchasePrice" placeholder="Purchase Price" required step="0.01">
-                <select id="category" required>
-                    <option value="" disabled selected>Select Category</option>
-                    <option value="Staple Foods">Staple Foods</option>
-                    <option value="Pulses/Dal">Pulses/Dal</option>
-                    <option value="Sweeteners/Salt">Sweeteners/Salt</option>
-                    <option value="Spices & Condiments">Spices & Condiments</option>
-                    <option value="Oils & Ghee">Oils & Ghee</option>
-                    <option value="Dairy & Related">Dairy & Related</option>
-                    <option value="Packaged Foods">Packaged Foods</option>
-                    <option value="Beverages">Beverages</option>
-                    <option value="Household & Personal Care">Household & Personal Care</option>
-                    <option value="Miscellaneous">Miscellaneous</option>
-                    <option value="Other">Other</option>
+      </div>
+
+      <div id="input-panel">
+        <div class="input-header">
+          <h2>Inventory Items</h2>
+          <div class="input-actions">
+            <button id="scan-barcode-btn" class="scan-btn">
+              📷 Scan Barcode
+            </button>
+            <button id="add-new-item" class="add-item-btn">
+              ➕ Add New Item
+            </button>
+          </div>
+        </div>
+
+        <div id="item-form-container" style="display: none">
+          <form id="item-form">
+            <div id="item-rows-container">
+              <div class="item-row" data-row-id="0">
+                <input
+                  type="text"
+                  name="itemName"
+                  placeholder="Item Name"
+                  required
+                />
+                <input
+                  type="number"
+                  name="itemQuantity"
+                  placeholder="Quantity"
+                  required
+                  min="0.01"
+                  step="0.01"
+                />
+                <input
+                  type="number"
+                  name="itemPrice"
+                  placeholder="Price"
+                  required
+                  step="0.01"
+                />
+                <select name="category" required>
+                  <option value="" disabled selected>Select Category</option>
+                  <option value="Staple Foods">Staple Foods</option>
+                  <option value="Pulses/Dal">Pulses/Dal</option>
+                  <option value="Sweeteners/Salt">Sweeteners/Salt</option>
+                  <option value="Spices & Condiments">
+                    Spices & Condiments
+                  </option>
+                  <option value="Oils & Ghee">Oils & Ghee</option>
+                  <option value="Dairy & Related">Dairy & Related</option>
+                  <option value="Packaged Foods">Packaged Foods</option>
+                  <option value="Beverages">Beverages</option>
+                  <option value="Household & Personal Care">
+                    Household & Personal Care
+                  </option>
+                  <option value="Miscellaneous">Miscellaneous</option>
+                  <option value="Other">Other</option>
                 </select>
-                <button type="submit">Add Item</button>
-            </form>
+                <button
+                  type="button"
+                  class="remove-row-btn"
+                  style="display: none"
+                >
+                  ✕
+                </button>
+              </div>
+            </div>
+            <div class="form-actions">
+              <button type="button" id="add-item-row-btn" class="add-row-btn">
+                ➕ Add Row
+              </button>
+              <button type="submit">Add All Items</button>
+              <button
+                type="button"
+                id="cancel-item-btn"
+                class="cancel-item-btn"
+              >
+                Cancel
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <hr />
+
+      <div id="inventory-panel">
+        <h2>Current Stock List</h2>
+        <div class="controls">
+          <p>Total Items: <span id="item-count">0</span></p>
+          <div class="search-container">
+            <input
+              type="text"
+              id="search-input"
+              placeholder="🔍 Search items by name or category..."
+            />
+            <button
+              id="clear-search"
+              class="clear-search-btn"
+              style="display: none"
+            >
+              ✕
+            </button>
+          </div>
+          <button id="toggle-sort">Sort by: Name (A-Z)</button>
+          <button id="show-bills" class="bills-btn">📄 View Bills</button>
+          <button id="show-analysis" class="analysis-btn">
+            📊 Purchase Analysis
+          </button>
+
+          <!-- Desktop Data Management -->
+          <div
+            class="data-management desktop-only"
+            id="data-management-section"
+            style="display: none"
+          >
+            <h3>Data Management</h3>
+            <div class="import-export-buttons">
+              <div class="export-section">
+                <button id="export-csv-btn" class="export-btn">
+                  Export to CSV
+                </button>
+                <button id="export-json-btn" class="export-btn">
+                  Export to JSON
+                </button>
+              </div>
+              <div class="import-section">
+                <label for="csv-import" class="import-label"
+                  >Import from CSV:</label
+                >
+                <input
+                  type="file"
+                  id="csv-import"
+                  accept=".csv"
+                  style="display: none"
+                />
+                <button id="import-csv-trigger" class="import-btn">
+                  Choose CSV File
+                </button>
+              </div>
+
+              <div class="import-section">
+                <label for="json-import" class="import-label"
+                  >Import from JSON:</label
+                >
+                <input
+                  type="file"
+                  id="json-import"
+                  accept=".json"
+                  style="display: none"
+                />
+                <button id="import-json-trigger" class="import-btn">
+                  Choose JSON File
+                </button>
+              </div>
+
+              <button id="clear-data-btn" class="clear-btn">
+                Clear All Data
+              </button>
+            </div>
+          </div>
+
+          <button
+            id="toggle-data-management"
+            class="data-management-toggle-btn desktop-only"
+          >
+            📊 Import/Export Data
+          </button>
+
+          <!-- Mobile Data Button -->
+          <button id="mobile-data-btn" class="mobile-data-btn mobile-only">
+            📊 Data
+          </button>
         </div>
 
-        <hr>
+        <!-- Desktop Table View -->
+        <div class="table-container desktop-only">
+          <table id="inventory-table">
+            <thead>
+              <tr>
+                <th>Item Name</th>
+                <th>Price</th>
+                <th>Category</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
 
-        <div id="inventory-panel">
-            <h2>Current Stock List</h2>
-            <div class="controls">
-                <p>Total Items: <span id="item-count">0</span></p>
-                <div class="search-container">
-                    <input type="text" id="search-input" placeholder="🔍 Search items by name or category..." />
-                    <button id="clear-search" class="clear-search-btn" style="display: none;">✕</button>
-                </div>
-                <button id="toggle-sort">Sort by: Name (A-Z)</button>
-                <button id="show-bills" class="bills-btn" onclick="showBillsView()">📄 View Bills</button>
-                
-                <!-- Desktop Data Management -->
-                <div class="data-management desktop-only">
-                    <h3>Data Management</h3>
-                    <div class="import-export-buttons">
-                        <button onclick="exportToCSV()" class="export-btn">Export to CSV</button>
-                        <button onclick="exportData()" class="export-btn">Export to JSON</button>
-                        
-                        <div class="import-section">
-                            <label for="csv-import" class="import-label">Import from CSV:</label>
-                            <input type="file" id="csv-import" accept=".csv" onchange="importFromCSV(event)" style="display: none;">
-                            <button onclick="document.getElementById('csv-import').click()" class="import-btn">Choose CSV File</button>
-                        </div>
-                        
-                        <div class="import-section">
-                            <label for="json-import" class="import-label">Import from JSON:</label>
-                            <input type="file" id="json-import" accept=".json" onchange="importData(event)" style="display: none;">
-                            <button onclick="document.getElementById('json-import').click()" class="import-btn">Choose JSON File</button>
-                        </div>
-                        
-                        <button onclick="clearAllData()" class="clear-btn">Clear All Data</button>
-                    </div>
-                </div>
-                
-                <!-- Mobile Data Button -->
-                <button id="mobile-data-btn" class="mobile-data-btn mobile-only" onclick="toggleDataModal()">
-                    📊 Data
-                </button>
-            </div>
-            
-            <!-- Desktop Table View -->
-            <div class="table-container desktop-only">
-                <table id="inventory-table">
-                    <thead>
-                        <tr>
-                            <th>Item Name</th>
-                            <th>Selling Price</th>
-                            <th>Purchase Price</th>
-                            <th>Category</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                    </tbody>
-                </table>
-            </div>
-            
-            <!-- Mobile Card View -->
-            <div id="inventory-cards" class="inventory-cards mobile-only"></div>
+        <!-- Mobile Card View -->
+        <div id="inventory-cards" class="inventory-cards mobile-only"></div>
+      </div>
+
+      <!-- Purchase Analysis Section -->
+      <div id="analysis-panel" class="analysis-panel" style="display: none">
+        <h2>📊 Purchase Analysis</h2>
+        <div class="analysis-controls">
+          <button id="back-to-inventory-from-analysis" class="back-btn">
+            ← Back to Inventory
+          </button>
+
+          <div class="period-selector">
+            <label for="analysis-period">Time Period:</label>
+            <select id="analysis-period">
+              <option value="7">Last 7 Days</option>
+              <option value="14">Last 14 Days</option>
+              <option value="30" selected>Last 30 Days</option>
+              <option value="60">Last 60 Days</option>
+              <option value="90">Last 90 Days</option>
+            </select>
+          </div>
         </div>
         
-        <!-- Bills View Section -->
-        <div id="bills-panel" class="bills-panel" style="display: none;">
-            <h2>📄 Bills Management</h2>
-            <div class="bills-controls">
-                <button id="back-to-inventory" class="back-btn" onclick="showInventoryView()">← Back to Inventory</button>
-                <button id="add-new-bill" class="add-bill-btn" onclick="addNewBill()">➕ Add New Bill</button>
-                <div class="restock-controls">
-                    <label for="restock-period">Restock Insights:</label>
-                    <select id="restock-period">
-                        <option value="7">7 Days</option>
-                        <option value="14">14 Days</option>
-                        <option value="30">30 Days</option>
-                    </select>
-                </div>
+        <div class="analysis-charts">
+          <div class="chart-card">
+            <h3>Spending by Category</h3>
+            <div class="chart-container">
+              <canvas id="spending-chart"></canvas>
             </div>
-            
-            <!-- Bills Form -->
-            <div id="bill-form-container" class="bill-form-container" style="display: none;">
-                <form id="bill-form" class="bill-form">
-                    <div class="form-row">
-                        <label for="bill-date">Date:</label>
-                        <input type="date" id="bill-date" required>
-                    </div>
-                    <div class="form-row">
-                        <label for="bill-item">Item:</label>
-                        <select id="bill-item" required>
-                            <option value="" disabled selected>Select an item</option>
-                            <!-- Items will be populated from inventory -->
-                        </select>
-                    </div>
-                    <div class="form-row">
-                        <label for="bill-quantity">Quantity:</label>
-                        <input type="number" id="bill-quantity" placeholder="Quantity" required min="1" value="1">
-                    </div>
-                    <div class="form-row">
-                        <label for="bill-purchase-price">Purchase Price:</label>
-                        <input type="number" id="bill-purchase-price" placeholder="Purchase Price" required step="0.01">
-                    </div>
-                    <div class="form-row">
-                        <label>Previous Purchase Price:</label>
-                        <span id="previous-purchase-price">₹0.00</span>
-                    </div>
-                    <button type="submit" class="submit-bill-btn">Add to Bill</button>
-                    <button type="button" class="cancel-bill-btn" onclick="cancelBill()">Cancel</button>
-                </form>
-            </div>
-            
-            <!-- Bills List -->
-            <div id="bills-list" class="bills-list">
-                <table id="bills-table">
-                    <thead>
-                        <tr>
-                            <th>Date</th>
-                            <th>Item</th>
-                            <th>Quantity</th>
-                            <th>Purchase Price</th>
-                            <th>Previous Price</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody id="bills-table-body">
-                        <!-- Bills will be displayed here -->
-                    </tbody>
-                </table>
+          </div>
+        </div>
+
+        <div class="table-container">
+          <table id="analysis-table">
+            <thead>
+              <tr>
+                <th>Rank</th>
+                <th>Item</th>
+                <th>Purchase Count</th>
+                <th>Avg Quantity</th>
+                <th>Avg Price</th>
+                <th>Burn Rate (per day)</th>
+                <th>Est. Days Left</th>
+                <th>Last Purchased</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Bills View Section -->
+      <div id="bills-panel" class="bills-panel" style="display: none">
+        <h2>📄 Bills Management</h2>
+        <div class="bills-controls">
+          <button id="back-to-inventory" class="back-btn">
+            ← Back to Inventory
+          </button>
+          <button id="add-new-bill" class="add-bill-btn">
+            ➕ Add New Bill
+          </button>
+
+          <div class="sync-group" style="display: none">
+            <!-- Moved to header -->
+          </div>
+
+          <div class="filter-group">
+            <input type="date" id="bill-filter-date" title="Filter by Date" />
+            <button id="clear-bill-filter" class="clear-btn">
+              Clear Filter
+            </button>
+          </div>
+        </div>
+
+        <!-- Bills Form -->
+        <div
+          id="bill-form-container"
+          class="bill-form-container"
+          style="display: none"
+        >
+          <form id="bill-form" class="bill-form">
+            <div class="bill-date-row">
+              <label for="bill-date">Date:</label>
+              <input type="date" id="bill-date" required />
             </div>
 
-            <!-- Restock Insights Section -->
-            <div id="restock-insights" class="restock-insights">
-                <h3>🔄 Restock Insights</h3>
-                <div id="insights-list" class="insights-list">
-                    <!-- Insights will be displayed here -->
-                </div>
+            <div id="bill-rows-container">
+              <div class="bill-row" data-row-id="0">
+                <input
+                  type="text"
+                  name="billItem"
+                  list="bill-item-options"
+                  placeholder="Item"
+                  required
+                  autocomplete="off"
+                />
+                <input
+                  type="number"
+                  name="billQuantity"
+                  placeholder="Quantity"
+                  required
+                  min="1"
+                  value="1"
+                />
+                <input
+                  type="number"
+                  name="billPurchasePrice"
+                  placeholder="Purchase Price"
+                  required
+                  step="0.01"
+                />
+                <button
+                  type="button"
+                  class="remove-bill-row-btn"
+                  style="display: none"
+                >
+                  ✕
+                </button>
+              </div>
             </div>
+            <datalist id="bill-item-options">
+              <!-- Items will be populated from inventory -->
+            </datalist>
+
+            <div class="bill-form-actions">
+              <button type="button" id="add-bill-row-btn" class="add-row-btn">
+                ➕ Add Row
+              </button>
+              <button type="submit" class="submit-bill-btn">
+                Add All Bills
+              </button>
+              <button
+                type="button"
+                class="cancel-bill-btn"
+                id="cancel-bill-btn"
+              >
+                Cancel
+              </button>
+            </div>
+          </form>
         </div>
+
+        <!-- Bills List -->
+        <div id="bills-list" class="bills-list">
+          <table id="bills-table">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Item</th>
+                <th>Quantity</th>
+                <th>Purchase Price</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="bills-table-body">
+              <!-- Bills will be displayed here -->
+            </tbody>
+          </table>
+          <div id="bill-cards" class="bill-cards mobile-only"></div>
+        </div>
+      </div>
     </div>
 
     <!-- Mobile Data Modal -->
     <div id="data-modal" class="data-modal">
-        <div class="data-modal-content">
-            <div class="data-modal-header">
-                <h3>Data Management</h3>
-                <button class="close-modal" onclick="toggleDataModal()">&times;</button>
-            </div>
-            
-            <div class="data-modal-body">
-                <h4>Export Data</h4>
-                <div class="modal-buttons">
-                    <button onclick="exportToCSV(); toggleDataModal();" class="export-btn">📄 Export to CSV</button>
-                    <button onclick="exportData(); toggleDataModal();" class="export-btn">📋 Export to JSON</button>
-                </div>
-                
-                <h4>Import Data</h4>
-                <div class="modal-buttons">
-                    <input type="file" id="mobile-csv-import" accept=".csv" onchange="importFromCSV(event)" style="display: none;">
-                    <button onclick="document.getElementById('mobile-csv-import').click()" class="import-btn">📁 Import from CSV</button>
-                    
-                    <input type="file" id="mobile-json-import" accept=".json" onchange="importData(event)" style="display: none;">
-                    <button onclick="document.getElementById('mobile-json-import').click()" class="import-btn">📁 Import from JSON</button>
-                </div>
-                
-                <h4>Data Actions</h4>
-                <div class="modal-buttons">
-                    <button onclick="clearAllData(); toggleDataModal();" class="clear-btn">🗑️ Clear All Data</button>
-                </div>
-            </div>
+      <div class="data-modal-content">
+        <div class="data-modal-header">
+          <h3>Data Management</h3>
+          <button class="close-modal">&times;</button>
         </div>
+
+        <div class="data-modal-body">
+          <h4>Export Data</h4>
+          <div class="modal-buttons">
+            <button id="mobile-export-csv" class="export-btn">
+              📄 Export to CSV
+            </button>
+            <button id="mobile-export-json" class="export-btn">
+              📋 Export to JSON
+            </button>
+          </div>
+
+          <h4>Import Data</h4>
+          <div class="modal-buttons">
+            <input
+              type="file"
+              id="mobile-csv-import"
+              accept=".csv"
+              style="display: none"
+            />
+            <button id="mobile-import-csv-trigger" class="import-btn">
+              📁 Import from CSV
+            </button>
+
+            <input
+              type="file"
+              id="mobile-json-import"
+              accept=".json"
+              style="display: none"
+            />
+            <button id="mobile-import-json-trigger" class="import-btn">
+              📁 Import from JSON
+            </button>
+          </div>
+
+          <h4>Data Actions</h4>
+          <div class="modal-buttons">
+            <button id="mobile-clear-data" class="clear-btn">
+              🗑️ Clear All Data
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
 
-    <script type="module" src="main.js"></script>
-</body>
+    <!-- Floating Action Button for Mobile -->
+    <button
+      id="mobile-fab"
+      class="mobile-fab mobile-only"
+      title="Add New Item"
+      aria-label="Add new item"
+    >
+      <span aria-hidden="true">➕</span>
+    </button>
+
+    <!-- Price History Modal -->
+    <div id="price-history-modal" class="chart-modal">
+      <div class="chart-modal-content">
+        <div class="chart-modal-header">
+          <h3 id="price-history-title">Price History</h3>
+          <button class="close-chart-modal">&times;</button>
+        </div>
+        <div class="chart-modal-body">
+          <canvas id="price-history-chart"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- Barcode Scanner Modal -->
+    <div id="scanner-modal" class="scanner-modal">
+      <div class="scanner-modal-content">
+        <div class="scanner-modal-header">
+          <h3>Scan Barcode/QR Code</h3>
+          <button class="close-scanner-modal">&times;</button>
+        </div>
+        <div class="scanner-modal-body">
+          <div id="scanner-reader"></div>
+          <div id="scanner-status" class="scanner-status">Initializing camera...</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Confirmation Modal -->
+    <div id="confirmation-modal" class="confirmation-modal">
+      <div class="confirmation-modal-content">
+        <div class="confirmation-modal-header">
+          <span class="icon">⚠️</span>
+          <h3>Are you sure?</h3>
+        </div>
+        <div class="confirmation-modal-body">
+          <p id="confirmation-message">This action will overwrite your current data. This cannot be undone.</p>
+        </div>
+        <div class="confirmation-modal-footer">
+          <button id="cancel-confirm" class="cancel-btn-secondary">Cancel</button>
+          <button id="execute-confirm" class="confirm-btn-primary">Confirm</button>
+        </div>
+      </div>
+    </div>
+
+    <script type="module" src="./src/app.js"></script>
+  </body>
 </html>
