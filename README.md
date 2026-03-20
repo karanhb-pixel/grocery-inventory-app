@@ -114,7 +114,7 @@ The **Grocery Inventory Management System** is a sophisticated single-page appli
 
 ### Data Management View
 
-<img src="screenshots/data_managment_section.png" width="600" alt="Data Management">
+<img src="screenshots/data_managment_section.jpeg" width="600" alt="Data Management">
 
 ### Mobile View
 
