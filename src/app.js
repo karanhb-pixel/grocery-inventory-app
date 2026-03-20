@@ -31,6 +31,7 @@ import {
 } from "./ui/inventory.ui.js";
 import { renderBills, cancelEditBill, initBillsUI } from "./ui/bills.ui.js";
 import {
+  initNavigation,
   initModals,
   initBillsFormUI,
   initItemFormUI,
